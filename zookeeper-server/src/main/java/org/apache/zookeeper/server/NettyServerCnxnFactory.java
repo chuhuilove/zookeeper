@@ -45,6 +45,9 @@ import org.jboss.netty.channel.group.ChannelGroup;
 import org.jboss.netty.channel.group.DefaultChannelGroup;
 import org.jboss.netty.channel.socket.nio.NioServerSocketChannelFactory;
 
+/*
+ * 使用的是netty3.x
+ */
 public class NettyServerCnxnFactory extends ServerCnxnFactory {
     Logger LOG = LoggerFactory.getLogger(NettyServerCnxnFactory.class);
 
