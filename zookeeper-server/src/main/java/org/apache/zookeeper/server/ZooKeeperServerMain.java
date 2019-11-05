@@ -47,13 +47,16 @@ public class ZooKeeperServerMain {
         "Usage: ZooKeeperServerMain configfile | port datadir [ticktime] [maxcnxns]";
 
     // ZooKeeper server supports two kinds of connection: unencrypted and encrypted.
+    /**
+     * ZooKeeper服务支持两种类型的连接:非加密和加密
+     */
     private ServerCnxnFactory cnxnFactory;
     private ServerCnxnFactory secureCnxnFactory;
     private ContainerManager containerManager;
 
     private AdminServer adminServer;
 
-    /*
+    /**
      * Start up the ZooKeeper server.
      *
      * @param args the configfile or the port datadir [ticktime]

@@ -58,7 +58,7 @@ tmp/**/*
 *.patch
 *.swp
 .ant-targets-build.xml
-
+zkdata/
 # C
 tags
 .cproject
