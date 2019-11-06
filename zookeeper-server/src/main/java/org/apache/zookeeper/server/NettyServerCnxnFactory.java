@@ -70,6 +70,9 @@ import org.apache.zookeeper.server.auth.X509AuthenticationProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+/**
+ * 基于Netty的服务端上下文通信框架
+ */
 public class NettyServerCnxnFactory extends ServerCnxnFactory {
     private static final Logger LOG = LoggerFactory.getLogger(NettyServerCnxnFactory.class);
 
@@ -219,6 +222,7 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
             /**
              * Only allow the connection to stay open if certificate passes auth
              */
+            @Override
             public void operationComplete(Future<Channel> future) throws SSLPeerUnverifiedException {
                 if (future.isSuccess()) {
                     if (LOG.isDebugEnabled()) {
@@ -387,11 +391,13 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
     }
 
     /** {@inheritDoc} */
+    @Override
     public int getMaxClientCnxnsPerHost() {
         return maxClientCnxns;
     }
 
     /** {@inheritDoc} */
+    @Override
     public void setMaxClientCnxnsPerHost(int max) {
         maxClientCnxns = max;
     }
@@ -471,7 +477,7 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
         localAddress = (InetSocketAddress) parentChannel.localAddress();
         LOG.info("bound to port " + getLocalPort());
     }
-    
+    @Override
     public void reconfigure(InetSocketAddress addr) {
        Channel oldChannel = parentChannel;
        try {

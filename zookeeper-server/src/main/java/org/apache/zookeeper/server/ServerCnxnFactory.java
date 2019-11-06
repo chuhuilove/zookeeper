@@ -39,7 +39,9 @@ import org.apache.zookeeper.server.auth.SaslServerCallbackHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-
+/**
+ * 这个类
+ */
 public abstract class ServerCnxnFactory {
 
     public static final String ZOOKEEPER_SERVER_CNXN_FACTORY = "zookeeper.serverCnxnFactory";
@@ -126,6 +128,12 @@ public abstract class ServerCnxnFactory {
     static public ServerCnxnFactory createFactory() throws IOException {
         String serverCnxnFactoryName =
             System.getProperty(ZOOKEEPER_SERVER_CNXN_FACTORY);
+        /**
+         * 在zk3.5+版本中,默认启用{@link NIOServerCnxnFactory}作为通信框架
+         *
+         * 当指定设置了{@code ZOOKEEPER_SERVER_CNXN_FACTORY}以后,会根据自己设定的
+         *
+         */
         if (serverCnxnFactoryName == null) {
             serverCnxnFactoryName = NIOServerCnxnFactory.class.getName();
         }

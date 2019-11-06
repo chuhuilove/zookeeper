@@ -72,7 +72,7 @@ public class ServerConfig {
     }
 
     /**
-     * Parse a ZooKeeper configuration file
+     * 解析zookeeper配置文件
      * @param path the patch of the configuration file
      * @return ServerConfig configured wrt arguments
      * @throws ConfigException error processing configuration
@@ -88,6 +88,7 @@ public class ServerConfig {
 
     /**
      * Read attributes from a QuorumPeerConfig.
+     * 从{@link QuorumPeerConfig}读取配置
      * @param config
      */
     public void readFrom(QuorumPeerConfig config) {

@@ -55,12 +55,22 @@ import org.apache.zookeeper.server.quorum.flexible.QuorumMaj;
 import org.apache.zookeeper.server.quorum.flexible.QuorumVerifier;
 import org.apache.zookeeper.server.util.VerifyingFileFactory;
 
+import static org.apache.zookeeper.util.Constants.CLIENT_PORT;
+import static org.apache.zookeeper.util.Constants.DATA_DIR;
+import static org.apache.zookeeper.util.Constants.DATA_LOG_DIR;
+
+/**
+ * 封装配置文件的类
+ */
 @InterfaceAudience.Public
 public class QuorumPeerConfig {
     private static final Logger LOG = LoggerFactory.getLogger(QuorumPeerConfig.class);
     private static final int UNSET_SERVERID = -1;
     public static final String nextDynamicConfigFileSuffix = ".dynamic.next";
 
+    /**
+     * 是否启用单机模式
+     */
     private static boolean standaloneEnabled = true;
     private static boolean reconfigEnabled = false;
 
@@ -72,6 +82,9 @@ public class QuorumPeerConfig {
     protected File dataDir;
     protected File dataLogDir;
     protected String dynamicConfigFileStr = null;
+    /**
+     * 设置配置文件路径
+     */
     protected String configFileStr = null;
     protected int tickTime = ZooKeeperServer.DEFAULT_TICK_TIME;
     protected int maxClientCnxns = 60;
@@ -226,6 +239,7 @@ public class QuorumPeerConfig {
     }
 
     /**
+     * 从配置文件中将数据解析出来
      * Parse config from a Properties.
      * @param zkProp Properties to parse from.
      * @throws IOException
@@ -238,14 +252,21 @@ public class QuorumPeerConfig {
         String clientPortAddress = null;
         String secureClientPortAddress = null;
         VerifyingFileFactory vff = new VerifyingFileFactory.Builder(LOG).warnForRelativePath().build();
+
+        /**
+         * 每一个key意义,都可以在https://zookeeper.apache.org/doc/r3.5.5/zookeeperAdmin.html#sc_configuration这个地方找到
+         * 在zookeeper3.5+版本中,可以使用基于Netty的NIO通信框架,
+         * 例如,启用如下设置:
+         * zookeeper.serverCnxnFactory=org.apache.zookeeper.server.NettyServerCnxnFactory
+         */
         for (Entry<Object, Object> entry : zkProp.entrySet()) {
             String key = entry.getKey().toString().trim();
             String value = entry.getValue().toString().trim();
-            if (key.equals("dataDir")) {
+            if (key.equals(DATA_DIR)) {
                 dataDir = vff.create(value);
-            } else if (key.equals("dataLogDir")) {
+            } else if (key.equals(DATA_LOG_DIR)) {
                 dataLogDir = vff.create(value);
-            } else if (key.equals("clientPort")) {
+            } else if (key.equals(CLIENT_PORT)) {
                 clientPort = Integer.parseInt(value);
             } else if (key.equals("localSessionsEnabled")) {
                 localSessionsEnabled = Boolean.parseBoolean(value);

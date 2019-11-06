@@ -23,6 +23,7 @@ import javax.management.JMException;
 import javax.security.sasl.SaslException;
 
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.zookeeper.client.FourLetterWordMain;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.apache.zookeeper.jmx.ManagedUtil;
@@ -37,7 +38,18 @@ import org.apache.zookeeper.server.quorum.QuorumPeerConfig.ConfigException;
 
 /**
  *
+ * 在zkServer.sh的启动脚本中,有两个类:
+ * {@link QuorumPeerMain}和
+ * {@link FourLetterWordMain}出现
+ *
+ * 什么意思呢?
+ *
+ *
  * <h2>Configuration file</h2>
+ *
+ *
+ * 当main()方法
+ *
  *
  * When the main() method of this class is used to start the program, the first
  * argument is used as a path to the config file, which will be used to obtain
@@ -109,7 +121,9 @@ public class QuorumPeerMain {
         throws ConfigException, IOException, AdminServerException
     {
         QuorumPeerConfig config = new QuorumPeerConfig();
+        // 如果只传了一个参数,则认为该参数是配置文件的路径
         if (args.length == 1) {
+            // 开始解析配置文件
             config.parse(args[0]);
         }
 

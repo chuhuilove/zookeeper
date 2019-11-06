@@ -71,6 +71,11 @@ import org.apache.zookeeper.admin.ZooKeeperAdmin;
 
 /**
  * The command line client to ZooKeeper.
+ * zookeeper基于命令行实现的客户端
+ *
+ * 知道如何与服务端通信
+ * 里面的线程安全的代码,还是非常值得阅读的..
+ * 另外,里面调用命令行界面的功能,在以后开发的PrimeMinister中,也能用得到
  *
  */
 @InterfaceAudience.Public
@@ -138,6 +143,7 @@ public class ZooKeeperMain {
     }
 
     private class MyWatcher implements Watcher {
+        @Override
         public void process(WatchedEvent event) {
             if (getPrintWatches()) {
                 ZooKeeperMain.printMessage("WATCHER::");
@@ -223,6 +229,18 @@ public class ZooKeeperMain {
         }
 
         /**
+         * zookeeper 客户端启动入口
+         * @param args
+         * @throws CliException
+         * @throws IOException
+         * @throws InterruptedException
+         */
+        public static void main(String args[]) throws CliException, IOException, InterruptedException {
+            ZooKeeperMain main = new ZooKeeperMain(args);
+            main.run();
+        }
+
+        /**
          * Breaks a string into command + arguments.
          * @param cmdstring string of form "cmd arg1 arg2..etc"
          * @return true if parsing succeeded.
@@ -287,17 +305,7 @@ public class ZooKeeperMain {
         zk = new ZooKeeperAdmin(host, Integer.parseInt(cl.getOption("timeout")), new MyWatcher(), readOnly);
     }
 
-    /**
-     * zookeeper 客户端启动入口
-     * @param args
-     * @throws CliException
-     * @throws IOException
-     * @throws InterruptedException
-     */
-    public static void main(String args[]) throws CliException, IOException, InterruptedException {
-        ZooKeeperMain main = new ZooKeeperMain(args);
-        main.run();
-    }
+
 
     public ZooKeeperMain(String args[]) throws IOException, InterruptedException {
         cl.parseOptions(args);

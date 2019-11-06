@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -41,10 +41,10 @@ import org.slf4j.LoggerFactory;
 @InterfaceAudience.Public
 public class ZooKeeperServerMain {
     private static final Logger LOG =
-        LoggerFactory.getLogger(ZooKeeperServerMain.class);
+            LoggerFactory.getLogger(ZooKeeperServerMain.class);
 
     private static final String USAGE =
-        "Usage: ZooKeeperServerMain configfile | port datadir [ticktime] [maxcnxns]";
+            "Usage: ZooKeeperServerMain configfile | port datadir [ticktime] [maxcnxns]";
 
     // ZooKeeper server supports two kinds of connection: unencrypted and encrypted.
     /**
@@ -91,16 +91,24 @@ public class ZooKeeperServerMain {
     }
 
     protected void initializeAndRun(String[] args)
-        throws ConfigException, IOException, AdminServerException
-    {
+            throws ConfigException, IOException, AdminServerException {
         try {
+            /**
+             * 顾名思义,启用log4j Bean
+             * 这是什么意思???
+             *
+             */
             ManagedUtil.registerLog4jMBeans();
         } catch (JMException e) {
             LOG.warn("Unable to register log4j JMX control", e);
         }
 
         ServerConfig config = new ServerConfig();
+        /**
+         * 如果只传了一个参数,则认为是一个配置文件
+         */
         if (args.length == 1) {
+            //解析配置文件
             config.parse(args[0]);
         } else {
             config.parse(args);
