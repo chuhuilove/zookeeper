@@ -27,6 +27,7 @@ import org.apache.zookeeper.server.quorum.QuorumPeerConfig.ConfigException;
 
 /**
  * Handles client specific properties
+ * 处理客户端特定的属性
  * @since 3.5.2
  */
 @InterfaceAudience.Public
@@ -58,7 +59,10 @@ public class ZKClientConfig extends ZKConfig {
      */
     @SuppressWarnings("deprecation")
     public static final String SECURE_CLIENT = ZooKeeper.SECURE_CLIENT;
-    public static final int CLIENT_MAX_PACKET_LENGTH_DEFAULT = 4096 * 1024; /* 4 MB */
+    /**
+     * 客户端最大默认packet长度为4MB
+     */
+    public static final int CLIENT_MAX_PACKET_LENGTH_DEFAULT = 4096 * 1024;
     public static final String ZOOKEEPER_REQUEST_TIMEOUT = "zookeeper.request.timeout";
     /**
      * Feature is disabled by default.

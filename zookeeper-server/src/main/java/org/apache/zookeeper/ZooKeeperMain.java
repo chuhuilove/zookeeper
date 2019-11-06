@@ -69,6 +69,8 @@ import org.apache.zookeeper.cli.SyncCommand;
 import org.apache.zookeeper.client.ZKClientConfig;
 import org.apache.zookeeper.admin.ZooKeeperAdmin;
 
+import static org.apache.zookeeper.client.ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET;
+
 /**
  * The command line client to ZooKeeper.
  * zookeeper基于命令行实现的客户端
@@ -131,6 +133,10 @@ public class ZooKeeperMain {
         for (Entry<String, CliCommand> entry : commandMapCli.entrySet()) {
             commandMap.put(entry.getKey(), entry.getValue().getOptionStr());
         }
+        /**
+         * 设置客户端通信框架为Netty
+         * System.setProperty(ZOOKEEPER_CLIENT_CNXN_SOCKET,ClientCnxnSocketNetty.class.getName());
+         */
     }
 
     static void usage() {
@@ -142,6 +148,9 @@ public class ZooKeeperMain {
         }
     }
 
+    /**
+     * 没有设置watch,则默认设置自定义的watch
+     */
     private class MyWatcher implements Watcher {
         @Override
         public void process(WatchedEvent event) {
@@ -192,6 +201,9 @@ public class ZooKeeperMain {
         /**
          * Parses a command line that may contain one or more flags
          * before an optional command string
+         *
+         * 解析命令行参数
+         *
          * @param args command line arguments
          * @return true if parsing succeeded, false otherwise.
          */
@@ -202,11 +214,14 @@ public class ZooKeeperMain {
             while (it.hasNext()) {
                 String opt = it.next();
                 try {
+                    // 如果命令中包含-server 参数,则读取下一个参数,以获取要连接的服务端地址
                     if (opt.equals("-server")) {
                         options.put("server", it.next());
                     } else if (opt.equals("-timeout")) {
+                        // 参数中如果包含timeout参数,则读取下一个参数,以获取连接超时时间
                         options.put("timeout", it.next());
                     } else if (opt.equals("-r")) {
+                        // 如果参数中包含-r 参数,则人为是只读模式
                         options.put("readonly", "true");
                     }
                 } catch (NoSuchElementException e) {
@@ -215,6 +230,7 @@ public class ZooKeeperMain {
                     return false;
                 }
 
+                // 如果参数不是以-开头,则直接提取命令
                 if (!opt.startsWith("-")) {
                     command = opt;
                     cmdArgs = new ArrayList<String>();
@@ -228,17 +244,7 @@ public class ZooKeeperMain {
             return true;
         }
 
-        /**
-         * zookeeper 客户端启动入口
-         * @param args
-         * @throws CliException
-         * @throws IOException
-         * @throws InterruptedException
-         */
-        public static void main(String args[]) throws CliException, IOException, InterruptedException {
-            ZooKeeperMain main = new ZooKeeperMain(args);
-            main.run();
-        }
+
 
         /**
          * Breaks a string into command + arguments.
@@ -266,7 +272,17 @@ public class ZooKeeperMain {
         }
     }
 
-
+    /**
+     * zookeeper 客户端启动入口
+     * @param args
+     * @throws CliException
+     * @throws IOException
+     * @throws InterruptedException
+     */
+    public static void main(String [] args) throws CliException, IOException, InterruptedException {
+        ZooKeeperMain main = new ZooKeeperMain(args);
+        main.run();
+    }
     /**
      * Makes a list of possible completions, either for commands
      * or for zk nodes if the token to complete begins with /
@@ -297,19 +313,23 @@ public class ZooKeeperMain {
             zk.close();
         }
         host = newHost;
+        // 设置安全连接....
         boolean readOnly = cl.getOption("readonly") != null;
         if (cl.getOption("secure") != null) {
             System.setProperty(ZKClientConfig.SECURE_CLIENT, "true");
             System.out.println("Secure connection is enabled");
         }
+        // 准备创建连接
         zk = new ZooKeeperAdmin(host, Integer.parseInt(cl.getOption("timeout")), new MyWatcher(), readOnly);
     }
 
 
 
     public ZooKeeperMain(String args[]) throws IOException, InterruptedException {
+        // 解析参数
         cl.parseOptions(args);
         System.out.println("Connecting to " + cl.getOption("server"));
+        // 连接到zk服务端
         connectToZK(cl.getOption("server"));
     }
 
@@ -324,6 +344,7 @@ public class ZooKeeperMain {
             boolean jlinemissing = false;
             // only use jline if it's in the classpath
             try {
+                // 这一段,就是启用了命令行,控制台
                 Class<?> consoleC = Class.forName("jline.console.ConsoleReader");
                 Class<?> completorC =
                         Class.forName("org.apache.zookeeper.JLineZNodeCompleter");
@@ -333,10 +354,14 @@ public class ZooKeeperMain {
                 Object console =
                         consoleC.getConstructor().newInstance();
 
+                // 构造出一个JLineZNodeCompleter对象
                 Object completor =
                         completorC.getConstructor(ZooKeeper.class).newInstance(zk);
+
+                // 获取一个名为addCompleter,参数为jline.console.completer.Completer的方法
                 Method addCompletor = consoleC.getMethod("addCompleter",
                         Class.forName("jline.console.completer.Completer"));
+                // 这里调用JLineZNodeCompleter的addCompleter方法
                 addCompletor.invoke(console, completor);
 
                 String line;

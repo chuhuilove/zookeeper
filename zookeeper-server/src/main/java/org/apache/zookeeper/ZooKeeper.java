@@ -804,6 +804,7 @@ public class ZooKeeper implements AutoCloseable {
 
 
     /**
+     * 创建一个zk客户端对象,
      * To create a ZooKeeper client object, the application needs to pass a
      * connection string containing a comma separated list of host:port pairs,
      * each corresponding to a ZooKeeper server.
@@ -868,9 +869,13 @@ public class ZooKeeper implements AutoCloseable {
         LOG.info("Initiating client connection, connectString=" + connectString
                 + " sessionTimeout=" + sessionTimeout + " watcher=" + watcher);
 
+        /**
+         * 设置{@ink ZKClientConfig}
+         */
         if (clientConfig == null) {
             clientConfig = new ZKClientConfig();
         }
+
         this.clientConfig = clientConfig;
         watchManager = defaultWatchManager();
         watchManager.defaultWatcher = watcher;
@@ -885,6 +890,19 @@ public class ZooKeeper implements AutoCloseable {
     }
 
     // @VisibleForTesting
+
+    /**
+     * 创建连接对象,也就是创建一个客户端的上下文对象
+     * @param chrootPath 如果连接字符串是localhost:2181,localhost:2182格式的,则这个参数是null
+     * @param hostProvider
+     * @param sessionTimeout session超时时间
+     * @param zooKeeper
+     * @param watcher
+     * @param clientCnxnSocket
+     * @param canBeReadOnly
+     * @return
+     * @throws IOException
+     */
     protected ClientCnxn createConnection(String chrootPath,
             HostProvider hostProvider, int sessionTimeout, ZooKeeper zooKeeper,
             ClientWatchManager watcher, ClientCnxnSocket clientCnxnSocket,
@@ -947,6 +965,11 @@ public class ZooKeeper implements AutoCloseable {
      */
     public ZooKeeper(String connectString, int sessionTimeout, Watcher watcher,
             boolean canBeReadOnly) throws IOException {
+        //  (connectString)将连接字符串转化成一个
+        /**
+         *  createDefaultHostProvider(connectString)
+         *  将连接诶字符串转换成一个{@link  HostProvider}对象.
+         */
         this(connectString, sessionTimeout, watcher, canBeReadOnly,
                 createDefaultHostProvider(connectString));
     }
@@ -1307,6 +1330,12 @@ public class ZooKeeper implements AutoCloseable {
     }
 
     // default hostprovider
+
+    /**
+     *
+     * @param connectString
+     * @return
+     */
     private static HostProvider createDefaultHostProvider(String connectString) {
         return new StaticHostProvider(
                 new ConnectStringParser(connectString).getServerAddresses());
@@ -3053,15 +3082,30 @@ public class ZooKeeper implements AutoCloseable {
         return cnxn.sendThread.getClientCnxnSocket().getLocalSocketAddress();
     }
 
+
+
+
+    /**
+     * 设置客户端的通信框架,zookeeper.clientCnxnSocket这个参数,代表了要启用哪一种通信框架
+     * 默认是启用基于原生NIO的通信框架{@link ClientCnxnSocketNIO},也可以设置启用基于Netty的通信框架{@link ClientCnxnSocketNetty}
+     * 如何配置属性呢?
+     * 在{@link ZKClientConfig#handleBackwardCompatibility}中,可以看到,其调用了System.getProperty(ZOOKEEPER_CLIENT_CNXN_SOCKET);
+     * 如果我们想要启用基于Netty的通信框架,则需要调用System.setProperty(ZOOKEEPER_CLIENT_CNXN_SOCKET,"org.apache.zookeeper.ClientCnxnSocketNetty")
+     */
     private ClientCnxnSocket getClientCnxnSocket() throws IOException {
         String clientCnxnSocketName = getClientConfig().getProperty(
                 ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET);
+
+
+
         if (clientCnxnSocketName == null) {
             clientCnxnSocketName = ClientCnxnSocketNIO.class.getName();
         }
         try {
+            // 反射获取一个socket通信实例
             Constructor<?> clientCxnConstructor = Class.forName(clientCnxnSocketName).getDeclaredConstructor(ZKClientConfig.class);
             ClientCnxnSocket clientCxnSocket = (ClientCnxnSocket) clientCxnConstructor.newInstance(getClientConfig());
+            LOG.info("Using {} as client connection socket", clientCnxnSocketName);
             return clientCxnSocket;
         } catch (Exception e) {
             IOException ioe = new IOException("Couldn't instantiate "

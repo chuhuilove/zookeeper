@@ -136,6 +136,9 @@ public final class StaticHostProvider implements HostProvider {
             throw new IllegalArgumentException(
                     "A HostProvider may not be empty!");
         }
+        /**
+         * 将地址混洗一下.
+         */
         this.serverAddresses = shuffle(serverAddresses);
         currentIndex = -1;
         lastIndex = -1;
@@ -156,6 +159,11 @@ public final class StaticHostProvider implements HostProvider {
         }
     }
 
+    /**
+     * 将IP地址混洗一下
+     * @param serverAddresses
+     * @return
+     */
     private List<InetSocketAddress> shuffle(Collection<InetSocketAddress> serverAddresses) {
         List<InetSocketAddress> tmpList = new ArrayList<>(serverAddresses.size());
         tmpList.addAll(serverAddresses);

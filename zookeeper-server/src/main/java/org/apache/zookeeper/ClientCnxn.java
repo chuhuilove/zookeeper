@@ -97,6 +97,12 @@ import org.slf4j.MDC;
  * of available servers to connect to and "transparently" switches servers it is
  * connected to as needed.
  *
+ * 这个管理socket io的类,
+ * ClientCnxn会维护一个可用服务器列表,以连接到服务器,并根据需要“透明地”切换与其连接的服务器。
+ *
+ * 这个类的命名有些不规范,暂时将其称为客户端的上下文环境吧..
+ *
+ *
  */
 @SuppressFBWarnings({"EI_EXPOSE_REP", "EI_EXPOSE_REP2"})
 public class ClientCnxn {
@@ -387,6 +393,9 @@ public class ClientCnxn {
     public ClientCnxn(String chrootPath, HostProvider hostProvider, int sessionTimeout, ZooKeeper zooKeeper,
             ClientWatchManager watcher, ClientCnxnSocket clientCnxnSocket,
             long sessionId, byte[] sessionPasswd, boolean canBeReadOnly) {
+
+
+
         this.zooKeeper = zooKeeper;
         this.watcher = watcher;
         this.sessionId = sessionId;
@@ -395,10 +404,23 @@ public class ClientCnxn {
         this.hostProvider = hostProvider;
         this.chrootPath = chrootPath;
 
+        /**
+         * 连接超时间的计算方法:
+         * 默认的session超时时间,除以有几台机器
+         */
+
         connectTimeout = sessionTimeout / hostProvider.size();
         readTimeout = sessionTimeout * 2 / 3;
         readOnly = canBeReadOnly;
 
+        LOG.info("Initiating ClientCnxn Object, chrootPath=" + chrootPath
+                + " sessionTimeout=" + sessionTimeout + " watcher=" + watcher+" sessionId="+sessionId+" sessionPasswd="+new String(sessionPasswd)+" canBeReadOnly"+canBeReadOnly
+        +" connectTimeout="+connectTimeout+" readTimeout="+readTimeout);
+
+        /**
+         * 创建两个线程
+         * 发送线程和接收线程
+         */
         sendThread = new SendThread(clientCnxnSocket);
         eventThread = new EventThread();
         this.clientConfig=zooKeeper.getClientConfig();

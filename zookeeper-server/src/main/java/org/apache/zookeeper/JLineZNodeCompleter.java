@@ -31,6 +31,7 @@ class JLineZNodeCompleter implements Completer {
     }
 
     @SuppressWarnings({ "unchecked", "rawtypes" })
+    @Override
     public int complete(String buffer, int cursor, List candidates) {
         // Guarantee that the final token is the one we're expanding
         buffer = buffer.substring(0,cursor);
