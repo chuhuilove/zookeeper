@@ -30,6 +30,13 @@ public class AdminServerFactory {
     private static final Logger LOG = LoggerFactory.getLogger(AdminServerFactory.class);
 
     /**
+     *
+     * 此方法封装了我们应该使用JettyAdminServer(即启用AdminServer)还是DummyAdminServer(即禁用AdminServer)的逻辑.
+     *
+     * 在尝试创建JettyAdminServer时,它使用反射,而不是直接引用该类.
+     * 所以,如果用户不希望通过ZooKeeper引入Jetty,则可以从类路径中省略Jetty.
+     * 当程序找不到Jetty的类时候,会启用DummyAdminServer的逻辑.
+     *
      * This method encapsulates the logic for whether we should use a
      * JettyAdminServer (i.e., the AdminServer is enabled) or a DummyAdminServer
      * (i.e., the AdminServer is disabled). It uses reflection when attempting

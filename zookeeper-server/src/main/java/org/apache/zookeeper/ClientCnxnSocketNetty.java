@@ -66,6 +66,9 @@ import static org.apache.zookeeper.common.X509Exception.SSLContextException;
  * ClientCnxnSocketNetty implements ClientCnxnSocket abstract methods.
  * It's responsible for connecting to server, reading/writing network traffic and
  * being a layer between network data and higher level packets.
+ *
+ * 基于Netty的socket 通信框架
+ *
  */
 public class ClientCnxnSocketNetty extends ClientCnxnSocket {
     private static final Logger LOG = LoggerFactory.getLogger(ClientCnxnSocketNetty.class);
@@ -84,9 +87,9 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
 
     ClientCnxnSocketNetty(ZKClientConfig clientConfig) throws IOException {
         this.clientConfig = clientConfig;
-        // Client only has 1 outgoing socket, so the event loop group only needs
-        // a single thread.
-        eventLoopGroup = NettyUtils.newNioOrEpollEventLoopGroup(1 /* nThreads */);
+        //客户端只有一个输出socket,因此event loop group只需要一个线程.
+        eventLoopGroup = NettyUtils.newNioOrEpollEventLoopGroup(1);
+        // 初始化一下packet的长度
         initProperties();
     }
 
@@ -110,6 +113,9 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
     boolean isConnected() {
         // Assuming that isConnected() is only used to initiate connection,
         // not used by some other connection status judgement.
+        /**
+         * 假设isConnected()仅用于初始化连接,而不是用于其他连接状态判断.
+         */
         connectLock.lock();
         try {
             return channel != null || connectFuture != null;
@@ -131,17 +137,28 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
     void connect(InetSocketAddress addr) throws IOException {
         firstConnect = new CountDownLatch(1);
 
+        /**
+         * 读源码的时候,每一行代码都认为是理所当然的,这种思想是不对的.
+         * 如果让我去设计者东西,我该怎么解决呢?
+         * 比如,这里为什么要加锁呢?还有其他地方调用connect方法吗?
+         * 加锁是为了保护谁?
+         * 这里为什么调用firstConnect = new CountDownLatch(1);
+         *
+         */
+
         Bootstrap bootstrap = new Bootstrap()
                 .group(eventLoopGroup)
                 .channel(NettyUtils.nioOrEpollSocketChannel())
                 .option(ChannelOption.SO_LINGER, -1)
                 .option(ChannelOption.TCP_NODELAY, true)
                 .handler(new ZKClientPipelineFactory(addr.getHostString(), addr.getPort()));
+
         bootstrap = configureBootstrapAllocator(bootstrap);
         bootstrap.validate();
 
         connectLock.lock();
         try {
+            // 这一行code,是连接到服务端,没错了....
             connectFuture = bootstrap.connect(addr);
             connectFuture.addListener(new ChannelFutureListener() {
                 @Override
@@ -425,6 +442,11 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
     /**
      * ZKClientPipelineFactory is the netty pipeline factory for this netty
      * connection implementation.
+     *
+     * ZKClientPipelineFactory 这个类,就相当于自己写Netty示例的时候,使用的xxxInitializer.
+     * 在里面添加各种pipeline
+     *
+     *
      */
     private class ZKClientPipelineFactory extends ChannelInitializer<SocketChannel> {
         private SSLContext sslContext = null;
@@ -464,6 +486,11 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
     /**
      * ZKClientHandler is the netty handler that sits in netty upstream last
      * place. It mainly handles read traffic and helps synchronize connection state.
+     *
+     * ZKClientHandler是实际发送/接收处理包的地方
+     * 由于其继承了{@code SimpleChannelInboundHandler}且,将{@code ByteBuf}作为泛型
+     * 所以,其接收和发送的数据包,都是由ByteBuf封装而成的.
+     *
      */
     private class ZKClientHandler extends SimpleChannelInboundHandler<ByteBuf> {
         AtomicBoolean channelClosed = new AtomicBoolean(false);

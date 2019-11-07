@@ -63,6 +63,10 @@ import org.slf4j.LoggerFactory;
  *
  *   Performance testing done by Facebook engineers shows that on Intel x86_64 machines, Java9 performs better with
  *   GCM and Java8 performs better with CBC, so these seem like reasonable defaults.
+ *
+ *   Facebook工程师进行的性能测试表明,在Intel x86_64机器上,
+ *   Java9在GCM上的性能更好,而Java8在CBC上的性能更好，因此这些似乎是合理的默认值
+ *
  */
 public abstract class X509Util implements Closeable, AutoCloseable {
     private static final Logger LOG = LoggerFactory.getLogger(X509Util.class);

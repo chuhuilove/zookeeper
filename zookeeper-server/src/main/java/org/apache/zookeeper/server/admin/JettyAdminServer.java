@@ -41,6 +41,7 @@ import org.slf4j.LoggerFactory;
 
 /**
  * This class encapsulates a Jetty server for running Commands.
+ * 这个类封装了一个Jetty服务器来运行命令.
  *
  * Given the default settings, start a ZooKeeper server and visit
  * http://<hostname>:8080/commands for links to all registered commands. Visiting

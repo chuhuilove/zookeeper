@@ -48,10 +48,13 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
+ *
+ * 这个类实现了{@link TxnLog}接口.它提供了访问txnlog并向其中添加条目的api.
+ *
  * This class implements the TxnLog interface. It provides api's
  * to access the txnlogs and add entries to it.
  * <p>
- * The format of a Transactional log is as follows:
+ * 事务日志的格式如下:
  * <blockquote><pre>
  * LogFile:
  *     FileHeader TxnList ZeroPad
@@ -110,8 +113,9 @@ public class FileTxnLog implements TxnLog {
 
         /** Local variable to read fsync.warningthresholdms into */
         Long fsyncWarningThreshold;
-        if ((fsyncWarningThreshold = Long.getLong(ZOOKEEPER_FSYNC_WARNING_THRESHOLD_MS_PROPERTY)) == null)
+        if ((fsyncWarningThreshold = Long.getLong(ZOOKEEPER_FSYNC_WARNING_THRESHOLD_MS_PROPERTY)) == null){
             fsyncWarningThreshold = Long.getLong(FSYNC_WARNING_THRESHOLD_MS_PROPERTY, 1000);
+        }
         fsyncWarningThresholdMS = fsyncWarningThreshold;
     }
 

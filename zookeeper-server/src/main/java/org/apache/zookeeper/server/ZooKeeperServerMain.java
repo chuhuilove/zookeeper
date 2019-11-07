@@ -63,6 +63,7 @@ public class ZooKeeperServerMain {
      */
     public static void main(String[] args) {
         ZooKeeperServerMain main = new ZooKeeperServerMain();
+
         try {
             main.initializeAndRun(args);
         } catch (IllegalArgumentException e) {
@@ -109,16 +110,18 @@ public class ZooKeeperServerMain {
          */
         if (args.length == 1) {
             //解析配置文件
+            LOG.info("args.length==1,has config file");
             config.parse(args[0]);
         } else {
             config.parse(args);
         }
-
+        // 从解析出来的配置文件中,启动应用
         runFromConfig(config);
     }
 
     /**
      * Run from a ServerConfig.
+     *
      * @param config ServerConfig to use.
      * @throws IOException
      * @throws AdminServerException
@@ -131,23 +134,34 @@ public class ZooKeeperServerMain {
             // Note that this thread isn't going to be doing anything else,
             // so rather than spawning another thread, we will just call
             // run() in this thread.
+            // 请注意,这个线程不会执行任何其他操作,因为我们将在这个线程中调用run(),而不是生成另一个线程.
             // create a file logger url from the command line args
             txnLog = new FileTxnSnapLog(config.dataLogDir, config.dataDir);
+
             final ZooKeeperServer zkServer = new ZooKeeperServer(txnLog,
                     config.tickTime, config.minSessionTimeout, config.maxSessionTimeout, null);
+
+            // 在ZooKeeperServer中已经设置过一次统计服务了,为啥还要再设置一次?
+            // 这难道也是一个小问题?
             txnLog.setServerStats(zkServer.serverStats());
 
             // Registers shutdown handler which will be used to know the
             // server error or shutdown state changes.
+            // 注册关闭处理程序,该处理程序将用于知道服务器错误或关闭状态更改.
             final CountDownLatch shutdownLatch = new CountDownLatch(1);
             zkServer.registerServerShutdownHandler(
                     new ZooKeeperServerShutdownHandler(shutdownLatch));
 
-            // Start Admin server
+            // 启动一个管理服务
             adminServer = AdminServerFactory.createAdminServer();
             adminServer.setZooKeeperServer(zkServer);
             adminServer.start();
 
+            ////启动服务 start///////
+            // 无论是安全的端口还是非安全的端口
+            // 都使用强制使用了Netty作为通信框架
+            // 毕竟嘛.哥哥最熟悉的还是netty
+            // 先搭建集群....
             boolean needStartZKServer = true;
             if (config.getClientPortAddress() != null) {
                 cnxnFactory = ServerCnxnFactory.createFactory();
@@ -161,6 +175,8 @@ public class ZooKeeperServerMain {
                 secureCnxnFactory.configure(config.getSecureClientPortAddress(), config.getMaxClientCnxns(), true);
                 secureCnxnFactory.startup(zkServer, needStartZKServer);
             }
+            ////启动服务 end///////
+
 
             containerManager = new ContainerManager(zkServer.getZKDatabase(), zkServer.firstProcessor,
                     Integer.getInteger("znode.container.checkIntervalMs", (int) TimeUnit.MINUTES.toMillis(1)),
@@ -170,7 +186,13 @@ public class ZooKeeperServerMain {
 
             // Watch status of ZooKeeper server. It will do a graceful shutdown
             // if the server is not running or hits an internal error.
+            // 查看ZooKeeper服务器的状态.
+            // 如果服务器未运行或遇到内部错误，它将正常关闭
+            // 这里,服务端会阻塞在这里
+            LOG.info("shutdownlatch.await() has execute");
             shutdownLatch.await();
+
+            LOG.info("shutdownlatch.await() had executed");
 
             shutdown();
 

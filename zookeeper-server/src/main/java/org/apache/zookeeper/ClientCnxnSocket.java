@@ -18,10 +18,12 @@
 
 package org.apache.zookeeper;
 
+import java.io.File;
 import java.io.IOException;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
 import java.nio.ByteBuffer;
+import java.nio.channels.FileChannel;
 import java.text.MessageFormat;
 import java.util.List;
 import java.util.concurrent.LinkedBlockingDeque;
@@ -66,6 +68,11 @@ abstract class ClientCnxnSocket {
     protected long lastSend;
     protected long now;
     protected ClientCnxn.SendThread sendThread;
+    /**
+     * 发送和接收的消息会被组装成一个{@link Packet}对象,
+     * 用{@code  LinkedBlockingDeque}来保存{@code Packet}对象,
+     * 意味着,消息的数量理论上是无限的,且遵循先进先出的顺序.
+     */
     protected LinkedBlockingDeque<Packet> outgoingQueue;
     protected ZKClientConfig clientConfig;
     private int packetLen = ZKClientConfig.CLIENT_MAX_PACKET_LENGTH_DEFAULT;

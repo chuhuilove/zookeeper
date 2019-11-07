@@ -121,7 +121,6 @@ public class DatadirCleanupManager {
             LOG.warn("Purge task not started. Ignoring shutdown!");
         }
     }
-
     static class PurgeTask extends TimerTask {
         private File logsDir;
         private File snapsDir;

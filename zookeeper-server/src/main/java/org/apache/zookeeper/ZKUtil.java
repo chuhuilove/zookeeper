@@ -168,4 +168,17 @@ public class ZKUtil {
             return; // ignore
         }
     }
+
+    public static void logStackInfo(String className){
+
+        StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
+        for(StackTraceElement element:stackTrace){
+            if(LOG.isDebugEnabled()){
+                LOG.debug("cyzi "+className+" stack:"+element.toString());
+            }
+        }
+    }
+
+
+
 }

@@ -86,15 +86,24 @@ import java.util.Map;
 import java.util.Set;
 
 /**
+ * 这是ZooKeeper客户端库的主要类.要使用ZooKeeper服务,应用程序必须首先实例化ZooKeeper类的对象.
+ * 所有的迭代都将通过调用ZooKeeper类的方法来完成.
+ * 这个类的方法是线程安全的,除非另有说明.
+ *
  * This is the main class of ZooKeeper client library. To use a ZooKeeper
  * service, an application must first instantiate an object of ZooKeeper class.
  * All the iterations will be done by calling the methods of ZooKeeper class.
  * The methods of this class are thread-safe unless otherwise noted.
  * <p>
+ *  一旦建立了到服务器的连接,就将session ID分配给客户端.
+ *  客户端将定期向服务器发送心跳以保持会话有效.
+ *
+ *
  * Once a connection to a server is established, a session ID is assigned to the
  * client. The client will send heart beats to the server periodically to keep
  * the session valid.
  * <p>
+ *     只要客户端的session ID保持有效,应用程序就可以通过客户端调用ZooKeeper api.
  * The application can call ZooKeeper APIs through a client as long as the
  * session ID of the client remains valid.
  * <p>
@@ -622,9 +631,33 @@ public class ZooKeeper implements AutoCloseable {
 
     @InterfaceAudience.Public
     public enum States {
-        CONNECTING, ASSOCIATING, CONNECTED, CONNECTEDREADONLY,
-        CLOSED, AUTH_FAILED, NOT_CONNECTED;
+        /**
+         * 正在连接中
+         */
+        CONNECTING,
+        ASSOCIATING,
+        /**
+         * 已经连接
+         */
+        CONNECTED,
+        CONNECTEDREADONLY,
+        /**
+         * 连接关闭
+         */
+        CLOSED,
+        /**
+         * 验证失败
+         */
+        AUTH_FAILED,
+        /**
+         * 没有连接
+         */
+        NOT_CONNECTED;
 
+        /**
+         * 如果连接不是处于关闭状态,且不是处于验证失败状态,就认为连接是活跃的
+         * @return
+         */
         public boolean isAlive() {
             return this != CLOSED && this != AUTH_FAILED;
         }
@@ -633,6 +666,10 @@ public class ZooKeeper implements AutoCloseable {
          * Returns whether we are connected to a server (which
          * could possibly be read-only, if this client is allowed
          * to go to read-only mode)
+         *
+         * 除却连接是不是活跃的验证之外,还有确认连接到是不是已经处于连接状态了.
+         * 只要当前状态是{@code CONNECTED}或者是{@code CONNECTEDREADONLY}状态,就认为是已经连接的状态
+         *
          * */
         public boolean isConnected() {
             return this == CONNECTED || this == CONNECTEDREADONLY;

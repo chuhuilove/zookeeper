@@ -42,7 +42,12 @@ import java.util.concurrent.LinkedBlockingQueue;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.zookeeper.ZKUtil.logStackInfo;
+
 /**
+ * NIOServerCnxnFactory使用NIO非阻塞套接字调用实现了多线程ServerCnxnFactory.
+ *
+ *
  * NIOServerCnxnFactory implements a multi-threaded ServerCnxnFactory using
  * NIO non-blocking socket calls. Communication between threads is handled via
  * queues.
@@ -630,6 +635,9 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
      * limits of the operating system). startup(zks) must be called subsequently.
      */
     public NIOServerCnxnFactory() {
+
+        logStackInfo("invoked NIOServerCnxnFactory no parame Constructor function ");
+
     }
 
     private volatile boolean stopped = true;
@@ -640,6 +648,18 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
 
     @Override
     public void configure(InetSocketAddress addr, int maxcc, boolean secure) throws IOException {
+
+        /**
+         * QuorumPeerMain.java:94
+         * QuorumPeerMain.java:142
+         * ZooKeeperServerMain.java:67
+         * ZooKeeperServerMain.java:117
+         * ZooKeeperServerMain.java:154
+         * NIOServerCnxnFactory.java:645
+         */
+
+
+
         if (secure) {
             throw new UnsupportedOperationException("SSL isn't supported in NIOServerCnxn");
         }
@@ -677,6 +697,7 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
                  + " worker threads, and "
                  + (directBufferBytes == 0 ? "gathered writes." :
                     ("" + (directBufferBytes/1024) + " kB direct buffers.")));
+        logStackInfo(getClass().getName());
         for(int i=0; i<numSelectorThreads; ++i) {
             selectorThreads.add(new SelectorThread(i));
         }

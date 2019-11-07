@@ -39,6 +39,8 @@ import org.apache.zookeeper.server.auth.SaslServerCallbackHandler;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.zookeeper.ZKUtil.logStackInfo;
+
 /**
  * 这个类
  */
@@ -124,23 +126,31 @@ public abstract class ServerCnxnFactory {
     }
 
     public abstract void closeAll();
-    
+
+    /**
+     * 创建一个通讯框架,哥哥我在zoo.cfg中强制配置成了Netty.
+     * 所以,一定要先好好学netty
+     */
     static public ServerCnxnFactory createFactory() throws IOException {
         String serverCnxnFactoryName =
             System.getProperty(ZOOKEEPER_SERVER_CNXN_FACTORY);
         /**
          * 在zk3.5+版本中,默认启用{@link NIOServerCnxnFactory}作为通信框架
-         *
          * 当指定设置了{@code ZOOKEEPER_SERVER_CNXN_FACTORY}以后,会根据自己设定的
-         *
          */
+
         if (serverCnxnFactoryName == null) {
             serverCnxnFactoryName = NIOServerCnxnFactory.class.getName();
         }
         try {
             ServerCnxnFactory serverCnxnFactory = (ServerCnxnFactory) Class.forName(serverCnxnFactoryName)
                     .getDeclaredConstructor().newInstance();
+
+
+            Class<NettyServerCnxnFactory> nettyServerCnxnFactoryClass = NettyServerCnxnFactory.class;
             LOG.info("Using {} as server connection factory", serverCnxnFactoryName);
+            logStackInfo(ServerCnxnFactory.class.getName());
+
             return serverCnxnFactory;
         } catch (Exception e) {
             IOException ioe = new IOException("Couldn't instantiate "

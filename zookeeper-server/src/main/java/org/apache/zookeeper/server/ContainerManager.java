@@ -29,6 +29,12 @@ import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 /**
+ *
+ * 管理容器znode的清理.
+ * 这个类应该由leader负责运行.
+ * 从followers/observers运行不会有任何不妥,但这将是不必要的额外工作.
+ * 一旦启动,它将定期检查具有cversion > 0 且没有子节点的容器节点.
+ *
  * Manages cleanup of container ZNodes. This class is meant to only
  * be run from the leader. There's no harm in running from followers/observers
  * but that will be extra work that's not needed. Once started, it periodically

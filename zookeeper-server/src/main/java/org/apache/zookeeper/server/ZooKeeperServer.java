@@ -75,9 +75,10 @@ import org.slf4j.LoggerFactory;
 
 
 /**
- * This class implements a simple standalone ZooKeeperServer. It sets up the
- * following chain of RequestProcessors to process requests:
+ * 这个类实现了单机模式的zkserver.
+ * 它设置下面的RequestProcessors链来处理请求:
  * PrepRequestProcessor -> SyncRequestProcessor -> FinalRequestProcessor
+ *
  */
 public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
     protected static final Logger LOG;
@@ -157,7 +158,10 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
             int minSessionTimeout, int maxSessionTimeout, ZKDatabase zkDb) {
         serverStats = new ServerStats(this);
         this.txnLogFactory = txnLogFactory;
+        // 给数据目录设置统计服务
         this.txnLogFactory.setServerStats(this.serverStats);
+
+        // 从ZookeeperServerMain.runFromConfig过来的方法,zkDb为null
         this.zkDb = zkDb;
         this.tickTime = tickTime;
         setMinSessionTimeout(minSessionTimeout);
@@ -1244,6 +1248,11 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
     /**
      * This method is used to register the ZooKeeperServerShutdownHandler to get
      * server's error or shutdown state change notifications.
+     *
+     * 此方法用于注册ZooKeeperServerShutdownHandler以获取服务器的错误或关闭状态更改通知.
+     *
+     * 每个服务器状态更改 {@link #setState(State)}都会调用{@link ZooKeeperServerShutdownHandler#handle(State)}
+     *
      * {@link ZooKeeperServerShutdownHandler#handle(State)} will be called for
      * every server state changes {@link #setState(State)}.
      *

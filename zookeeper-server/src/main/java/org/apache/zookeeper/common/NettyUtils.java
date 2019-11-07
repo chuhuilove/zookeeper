@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -42,6 +42,8 @@ import org.slf4j.LoggerFactory;
 
 /**
  * Helper methods for netty code.
+ * <p>
+ * Netty工具类
  */
 public class NettyUtils {
     private static final Logger LOG = LoggerFactory.getLogger(NettyUtils.class);
@@ -53,6 +55,7 @@ public class NettyUtils {
      * {@link EpollEventLoopGroup}, otherwise returns a new
      * {@link NioEventLoopGroup}. Creates the event loop group using the
      * default number of threads.
+     *
      * @return a new {@link EventLoopGroup}.
      */
     public static EventLoopGroup newNioOrEpollEventLoopGroup() {
@@ -64,14 +67,20 @@ public class NettyUtils {
     }
 
     /**
+     * 获取一个{@code EventLoopGroup}对象,判断一下这台机器上是否拥有epoll特性,
+     * 如果有的话,直接使用{@code EpollEventLoopGroup}
+     * 否则还是使用Netty封装的原生NIO进行网络通信
+     * <p>
      * If {@link Epoll#isAvailable()} <code>== true</code>, returns a new
      * {@link EpollEventLoopGroup}, otherwise returns a new
      * {@link NioEventLoopGroup}. Creates the event loop group using the
      * specified number of threads instead of the default.
+     *
      * @param nThreads see {@link NioEventLoopGroup#NioEventLoopGroup(int)}.
      * @return a new {@link EventLoopGroup}.
      */
     public static EventLoopGroup newNioOrEpollEventLoopGroup(int nThreads) {
+
         if (Epoll.isAvailable()) {
             return new EpollEventLoopGroup(nThreads);
         } else {
@@ -82,6 +91,7 @@ public class NettyUtils {
     /**
      * If {@link Epoll#isAvailable()} <code>== true</code>, returns
      * {@link EpollSocketChannel}, otherwise returns {@link NioSocketChannel}.
+     *
      * @return a socket channel class.
      */
     public static Class<? extends SocketChannel> nioOrEpollSocketChannel() {
@@ -96,6 +106,7 @@ public class NettyUtils {
      * If {@link Epoll#isAvailable()} <code>== true</code>, returns
      * {@link EpollServerSocketChannel}, otherwise returns
      * {@link NioServerSocketChannel}.
+     *
      * @return a server socket channel class.
      */
     public static Class<? extends ServerSocketChannel> nioOrEpollServerSocketChannel() {
@@ -107,13 +118,16 @@ public class NettyUtils {
     }
 
     /**
+     * 尝试检测并返回客户端可以用来访问此服务器的本地网络地址数.
+     * 这意味着我们排除了以下地址类型:
+     * <p>
      * Attempts to detect and return the number of local network addresses that could be
      * used by a client to reach this server. This means we exclude the following address types:
      * <ul>
-     *     <li>Multicast addresses. Zookeeper server sockets use TCP, thus cannot bind to a multicast address.</li>
-     *     <li>Link-local addresses. Routers don't forward traffic sent to a link-local address, so
-     *     any realistic server deployment would not have clients using these.</li>
-     *     <li>Loopback addresses. These are typically only used for testing.</li>
+     * <li>Multicast addresses. Zookeeper server sockets use TCP, thus cannot bind to a multicast address.</li>
+     * <li>Link-local addresses. Routers don't forward traffic sent to a link-local address, so
+     * any realistic server deployment would not have clients using these.</li>
+     * <li>Loopback addresses. These are typically only used for testing.</li>
      * </ul>
      * Any remaining addresses are counted, and the total count is returned. This number is
      * used to configure the number of threads for the "boss" event loop group, to make sure we have
@@ -131,30 +145,22 @@ public class NettyUtils {
             for (NetworkInterface networkInterface : Collections.list(allNetworkInterfaces)) {
                 for (InetAddress inetAddress : Collections.list(networkInterface.getInetAddresses())) {
                     if (inetAddress.isLinkLocalAddress()) {
-                        if (LOG.isDebugEnabled()) {
-                            LOG.debug("Ignoring link-local InetAddress {}", inetAddress);
-                        }
+                        LOG.debug("Ignoring link-local InetAddress {}", inetAddress);
                         continue;
                     }
                     if (inetAddress.isMulticastAddress()) {
-                        if (LOG.isDebugEnabled()) {
-                            LOG.debug("Ignoring multicast InetAddress {}", inetAddress);
-                        }
+                        LOG.debug("Ignoring multicast InetAddress {}", inetAddress);
                         continue;
                     }
                     if (inetAddress.isLoopbackAddress()) {
-                        if (LOG.isDebugEnabled()) {
-                            LOG.debug("Ignoring loopback InetAddress {}", inetAddress);
-                        }
+                        LOG.debug("Ignoring loopback InetAddress {}", inetAddress);
                         continue;
                     }
                     validInetAddresses.add(inetAddress);
                 }
             }
-            if (LOG.isDebugEnabled()) {
-                LOG.debug("Detected {} local network addresses", validInetAddresses.size());
-                LOG.debug("Resolved local addresses are: {}", Arrays.toString(validInetAddresses.toArray()));
-            }
+            LOG.debug("Detected {} local network addresses", validInetAddresses.size());
+            LOG.debug("Resolved local addresses are: {}", Arrays.toString(validInetAddresses.toArray()));
             return validInetAddresses.size() > 0 ? validInetAddresses.size() : DEFAULT_INET_ADDRESS_COUNT;
         } catch (SocketException ex) {
             LOG.warn("Failed to list all network interfaces, assuming 1", ex);

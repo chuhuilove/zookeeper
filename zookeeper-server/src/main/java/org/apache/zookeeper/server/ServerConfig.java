@@ -23,6 +23,7 @@ import java.net.InetSocketAddress;
 import java.util.Arrays;
 
 import org.apache.yetus.audience.InterfaceAudience;
+import org.apache.zookeeper.ZKUtil;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig;
 import org.apache.zookeeper.server.quorum.QuorumPeerConfig.ConfigException;
 
@@ -51,6 +52,11 @@ public class ServerConfig {
 
     /**
      * Parse arguments for server configuration
+     *
+     * 解析参数,这是从命令行中得来的参数,直接硬解析参数
+     * 如: zkServer.sh  2181  /home/yunchu/zkdata/  10 60
+     * 客户端端口 zk的数据目录  tickTime 最大客户端连接数
+     *
      * @param args clientPort dataDir and optional tickTime and maxClientCnxns
      * @return ServerConfig configured wrt arguments
      * @throws IllegalArgumentException on invalid usage
@@ -78,6 +84,7 @@ public class ServerConfig {
      * @throws ConfigException error processing configuration
      */
     public void parse(String path) throws ConfigException {
+
         QuorumPeerConfig config = new QuorumPeerConfig();
         config.parse(path);
 
@@ -92,6 +99,13 @@ public class ServerConfig {
      * @param config
      */
     public void readFrom(QuorumPeerConfig config) {
+
+        /**
+         * 这个函数在{@link #parse(String)}调用,因为在{@link #parse(String)}中,已经将配置文件中的数据解析过了
+         * 这里只需要一些特定的数据来赋值而已.
+         *
+         */
+
         clientPortAddress = config.getClientPortAddress();
         secureClientPortAddress = config.getSecureClientPortAddress();
         dataDir = config.getDataDir();

@@ -108,7 +108,7 @@ import org.slf4j.MDC;
 public class ClientCnxn {
     private static final Logger LOG = LoggerFactory.getLogger(ClientCnxn.class);
 
-    /* ZOOKEEPER-706: If a session has a large number of watches set then
+    /** ZOOKEEPER-706: If a session has a large number of watches set then
      * attempting to re-establish those watches after a connection loss may
      * fail due to the SetWatches request exceeding the server's configured
      * jute.maxBuffer value. To avoid this we instead split the watch
@@ -132,12 +132,12 @@ public class ClientCnxn {
     private final CopyOnWriteArraySet<AuthData> authInfo = new CopyOnWriteArraySet<AuthData>();
 
     /**
-     * These are the packets that have been sent and are waiting for a response.
+     * 这些是已经发送并正在等待响应的包.
      */
     private final LinkedList<Packet> pendingQueue = new LinkedList<Packet>();
 
     /**
-     * These are the packets that need to be sent.
+     * 这些是需要发送的包.
      */
     private final LinkedBlockingDeque<Packet> outgoingQueue = new LinkedBlockingDeque<Packet>();
 
@@ -249,11 +249,19 @@ public class ClientCnxn {
     }
 
     /**
-     * This class allows us to pass the headers and the relevant records around.
+     *
+     * 这个类是客户端和服务端通信的数据载体
+     *
      */
     static class Packet {
+        /**
+         * 请求头
+         */
         RequestHeader requestHeader;
 
+        /**
+         * 响应头
+         */
         ReplyHeader replyHeader;
 
         Record request;
@@ -419,7 +427,7 @@ public class ClientCnxn {
 
         /**
          * 创建两个线程
-         * 发送线程和接收线程
+         * 都设置为守护线程
          */
         sendThread = new SendThread(clientCnxnSocket);
         eventThread = new EventThread();
@@ -954,6 +962,7 @@ public class ClientCnxn {
             super(makeThreadName("-SendThread()"));
             state = States.CONNECTING;
             this.clientCnxnSocket = clientCnxnSocket;
+            // send线程设置为守护线程
             setDaemon(true);
         }
 
@@ -1086,8 +1095,14 @@ public class ClientCnxn {
         // throws a LoginException: see startConnect() below.
         private boolean saslLoginFailed = false;
 
+        /**
+         * 初始化一个连接..
+         * @param addr
+         * @throws IOException
+         */
         private void startConnect(InetSocketAddress addr) throws IOException {
             // initializing it for new connection
+            //
             saslLoginFailed = false;
             if(!isFirstConnect){
                 try {
@@ -1123,6 +1138,8 @@ public class ClientCnxn {
             }
             logStartConnect(addr);
 
+            // 前面做了一堆准备工作,现在开始连接
+
             clientCnxnSocket.connect(addr);
         }
 
@@ -1138,24 +1155,35 @@ public class ClientCnxn {
             ", closing socket connection and attempting reconnect";
         @Override
         public void run() {
+            // 启用scoket
+            //session id默认为0
             clientCnxnSocket.introduce(this, sessionId, outgoingQueue);
             clientCnxnSocket.updateNow();
             clientCnxnSocket.updateLastSendAndHeard();
             int to;
             long lastPingRwServer = Time.currentElapsedTime();
-            final int MAX_SEND_PING_INTERVAL = 10000; //10 seconds
+            //10 心跳发送间隔
+            final int MAX_SEND_PING_INTERVAL = 10000;
             InetSocketAddress serverAddress = null;
             while (state.isAlive()) {
                 try {
                     if (!clientCnxnSocket.isConnected()) {
+                        // 如果没有连接到服务端,
+                        // 判断一下是不是正在关闭,如果不是正在关闭,则认为是需要初始化连接
                         // don't re-establish connection if we are closing
                         if (closing) {
                             break;
                         }
+                        /**
+                         * 从{@link #hostProvider} 中获取一个服务端地址,来进行连接
+                         */
                         if (rwServerAddress != null) {
                             serverAddress = rwServerAddress;
                             rwServerAddress = null;
                         } else {
+                            /**
+                             * 获取一个
+                             */
                             serverAddress = hostProvider.next(1000);
                         }
                         startConnect(serverAddress);
@@ -1669,6 +1697,9 @@ public class ClientCnxn {
 
     private void initRequestTimeout() {
         try {
+            /**
+             * 设置客户端的请求超时时间
+             */
             requestTimeout = clientConfig.getLong(
                     ZKClientConfig.ZOOKEEPER_REQUEST_TIMEOUT,
                     ZKClientConfig.ZOOKEEPER_REQUEST_TIMEOUT_DEFAULT);

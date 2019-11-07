@@ -22,9 +22,16 @@ import org.apache.yetus.audience.InterfaceAudience;
 import org.apache.zookeeper.server.ZooKeeperServer;
 
 /**
+ *
+ * 用于运行命令的嵌入式管理服务器的接口.
+ *
  * Interface for an embedded admin server that runs Commands. There is only one
  * functional implementation, JettyAdminServer. DummyAdminServer, which does
  * nothing, is used when we do not wish to run a server.
+ *
+ * 只有JettyAdminServer实现了功能.
+ * 当我们不希望运行admin服务时,将使用不执行任何操作的DummyAdminServer.
+ *
  */
 @InterfaceAudience.Public
 public interface AdminServer {

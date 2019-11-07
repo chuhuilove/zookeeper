@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -70,6 +70,8 @@ import org.apache.zookeeper.server.auth.X509AuthenticationProvider;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.zookeeper.ZKUtil.logStackInfo;
+
 /**
  * 基于Netty的服务端上下文通信框架
  */
@@ -85,6 +87,8 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
     private final Map<InetAddress, Set<NettyServerCnxn>> ipMap = new HashMap<>();
     private InetSocketAddress localAddress;
     private int maxClientCnxns = 60;
+
+    // 这是做什么的??
     private final ClientX509Util x509Util;
 
     private static final AttributeKey<NettyServerCnxn> CONNECTION_ATTRIBUTE =
@@ -265,7 +269,7 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
             }
         }
     }
-    
+
     CnxnChannelHandler channelHandler = new CnxnChannelHandler();
 
     private ServerBootstrap configureBootstrapAllocator(ServerBootstrap bootstrap) {
@@ -280,11 +284,17 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
     }
 
     NettyServerCnxnFactory() {
+
         x509Util = new ClientX509Util();
 
-        EventLoopGroup bossGroup = NettyUtils.newNioOrEpollEventLoopGroup(
-                NettyUtils.getClientReachableLocalInetAddressCount());
+        // 服务端的机器上有多少个可用地址,就开多少个线程
+        int reachableCount = NettyUtils.getClientReachableLocalInetAddressCount();
+
+        LOG.info("this machine client reachable local InetAddress count:{}", reachableCount);
+
+        EventLoopGroup bossGroup = NettyUtils.newNioOrEpollEventLoopGroup(reachableCount);
         EventLoopGroup workerGroup = NettyUtils.newNioOrEpollEventLoopGroup();
+
         ServerBootstrap bootstrap = new ServerBootstrap()
                 .group(bossGroup, workerGroup)
                 .channel(NettyUtils.nioOrEpollServerSocketChannel())
@@ -305,6 +315,7 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
                 });
         this.bootstrap = configureBootstrapAllocator(bootstrap);
         this.bootstrap.validate();
+        logStackInfo(getClass().getName());
     }
 
     private synchronized void initSSL(ChannelPipeline p)
@@ -316,20 +327,19 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
         } else {
             sslContext = SSLContext.getInstance("TLSv1");
             X509AuthenticationProvider authProvider =
-                    (X509AuthenticationProvider)ProviderRegistry.getProvider(
+                    (X509AuthenticationProvider) ProviderRegistry.getProvider(
                             System.getProperty(x509Util.getSslAuthProviderProperty(), "x509"));
 
-            if (authProvider == null)
-            {
+            if (authProvider == null) {
                 LOG.error("Auth provider not found: {}", authProviderProp);
                 throw new SSLContextException(
                         "Could not create SSLContext with specified auth provider: " +
-                        authProviderProp);
+                                authProviderProp);
             }
 
-            sslContext.init(new X509KeyManager[] { authProvider.getKeyManager() },
-                            new X509TrustManager[] { authProvider.getTrustManager() },
-                            null);
+            sslContext.init(new X509KeyManager[]{authProvider.getKeyManager()},
+                    new X509TrustManager[]{authProvider.getTrustManager()},
+                    null);
         }
 
         SSLEngine sslEngine = sslContext.createSSLEngine();
@@ -353,7 +363,7 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
                 cnxn.close();
             } catch (Exception e) {
                 LOG.warn("Ignoring exception closing cnxn sessionid 0x"
-                         + Long.toHexString(cnxn.getSessionId()), e);
+                        + Long.toHexString(cnxn.getSessionId()), e);
             }
         }
         if (LOG.isDebugEnabled()) {
@@ -382,8 +392,7 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
 
     @Override
     public void configure(InetSocketAddress addr, int maxClientCnxns, boolean secure)
-            throws IOException
-    {
+            throws IOException {
         configureSaslLogin();
         localAddress = addr;
         this.maxClientCnxns = maxClientCnxns;
@@ -408,10 +417,11 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
     }
 
     private boolean killed; // use synchronized(this) to access
+
     @Override
     public void join() throws InterruptedException {
-        synchronized(this) {
-            while(!killed) {
+        synchronized (this) {
+            while (!killed) {
                 wait();
             }
         }
@@ -462,14 +472,16 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
         if (zkServer != null) {
             zkServer.shutdown();
         }
-        synchronized(this) {
+        synchronized (this) {
             killed = true;
             notifyAll();
         }
     }
-    
+
     @Override
     public void start() {
+        logStackInfo(getClass().getName());
+
         LOG.info("binding to port {}", localAddress);
         parentChannel = bootstrap.bind(localAddress).syncUninterruptibly().channel();
         // Port changes after bind() if the original port was 0, update
@@ -477,23 +489,24 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
         localAddress = (InetSocketAddress) parentChannel.localAddress();
         LOG.info("bound to port " + getLocalPort());
     }
+
     @Override
     public void reconfigure(InetSocketAddress addr) {
-       Channel oldChannel = parentChannel;
-       try {
-           LOG.info("binding to port {}", addr);
-           parentChannel = bootstrap.bind(addr).syncUninterruptibly().channel();
-           // Port changes after bind() if the original port was 0, update
-           // localAddress to get the real port.
-           localAddress = (InetSocketAddress) parentChannel.localAddress();
-           LOG.info("bound to port " + getLocalPort());
-       } catch (Exception e) {
-           LOG.error("Error while reconfiguring", e);
-       } finally {
-           oldChannel.close();
-       }
+        Channel oldChannel = parentChannel;
+        try {
+            LOG.info("binding to port {}", addr);
+            parentChannel = bootstrap.bind(addr).syncUninterruptibly().channel();
+            // Port changes after bind() if the original port was 0, update
+            // localAddress to get the real port.
+            localAddress = (InetSocketAddress) parentChannel.localAddress();
+            LOG.info("bound to port " + getLocalPort());
+        } catch (Exception e) {
+            LOG.error("Error while reconfiguring", e);
+        } finally {
+            oldChannel.close();
+        }
     }
-    
+
     @Override
     public void startup(ZooKeeperServer zks, boolean startServer)
             throws IOException, InterruptedException {
@@ -517,9 +530,9 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
 
     private void addCnxn(NettyServerCnxn cnxn) {
         cnxns.add(cnxn);
-        synchronized (ipMap){
+        synchronized (ipMap) {
             InetAddress addr =
-                ((InetSocketAddress)cnxn.getChannel().remoteAddress()).getAddress();
+                    ((InetSocketAddress) cnxn.getChannel().remoteAddress()).getAddress();
             Set<NettyServerCnxn> s = ipMap.get(addr);
             if (s == null) {
                 s = new HashSet<>();
@@ -550,14 +563,14 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
     @Override
     public void resetAllConnectionStats() {
         // No need to synchronize since cnxns is backed by a ConcurrentHashMap
-        for(ServerCnxn c : cnxns){
+        for (ServerCnxn c : cnxns) {
             c.resetStats();
         }
     }
 
     @Override
     public Iterable<Map<String, Object>> getAllConnectionInfo(boolean brief) {
-        HashSet<Map<String,Object>> info = new HashSet<Map<String,Object>>();
+        HashSet<Map<String, Object>> info = new HashSet<Map<String, Object>>();
         // No need to synchronize since cnxns is backed by a ConcurrentHashMap
         for (ServerCnxn c : cnxns) {
             info.add(c.getConnectionInfo(brief));
