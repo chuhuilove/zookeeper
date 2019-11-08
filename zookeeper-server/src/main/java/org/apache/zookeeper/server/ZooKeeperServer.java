@@ -287,10 +287,12 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
          *  
          * See ZOOKEEPER-1642 for more detail.
          */
+        // 如果zkDb已经初始化了....
         if(zkDb.isInitialized()){
             setZxid(zkDb.getDataTreeLastProcessedZxid());
         }
         else {
+            // 如果还没有初始化
             setZxid(zkDb.loadDataBase());
         }
         
@@ -447,6 +449,11 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
     public void startdata()
     throws IOException, InterruptedException {
         //check to see if zkDb is not null
+        /**
+         * 因为在ZooKeeperServerMain的runFromConfig的函数中
+         * 创建ZooKeeperServer的时候,没有给zkDb设置值
+         * 所以这里需要判断一下
+         */
         if (zkDb == null) {
             zkDb = new ZKDatabase(this.txnLogFactory);
         }

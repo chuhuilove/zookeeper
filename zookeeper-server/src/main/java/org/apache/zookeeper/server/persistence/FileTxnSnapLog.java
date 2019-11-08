@@ -40,6 +40,8 @@ import org.apache.zookeeper.txn.TxnHeader;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.zookeeper.ZKUtil.logStackInfo;
+
 /**
  * This is a helper class
  * above the implementations
@@ -56,7 +58,13 @@ public class FileTxnSnapLog {
     //the directory containing the
     //the snapshot directory
     private final File snapDir;
+    /**
+     * 事务,数据日志
+     */
     private TxnLog txnLog;
+    /**
+     * 快照
+     */
     private SnapShot snapLog;
     public final static int VERSION = 2;
     public final static String version = "version-";
@@ -211,6 +219,9 @@ public class FileTxnSnapLog {
      * this function restores the server
      * database after reading from the
      * snapshots and transaction logs
+     *
+     * 从快照和事务日志中读取数据后,此函数将还原服务器数据库
+     *
      * @param dt the datatree to be restored
      * @param sessions the sessions to be restored
      * @param listener the playback listener to run on the
@@ -220,6 +231,7 @@ public class FileTxnSnapLog {
      */
     public long restore(DataTree dt, Map<Long, Integer> sessions,
                         PlayBackListener listener) throws IOException {
+
         long deserializeResult = snapLog.deserialize(dt, sessions);
         FileTxnLog txnLog = new FileTxnLog(dataDir);
         if (-1L == deserializeResult) {
@@ -385,6 +397,33 @@ public class FileTxnSnapLog {
     public void save(DataTree dataTree,
                      ConcurrentHashMap<Long, Integer> sessionsWithTimeouts)
             throws IOException {
+
+
+
+        // 创建 snapshot的调用链
+
+//   java.lang.Thread.getStackTrace(Thread.java:1559)
+//   org.apache.zookeeper.ZKUtil.logStackInfo(ZKUtil.java:174)
+//   org.apache.zookeeper.server.persistence.FileTxnSnapLog.save(FileTxnSnapLog.java:401)
+//   org.apache.zookeeper.server.ZooKeeperServer.takeSnapshot(ZooKeeperServer.java:318)
+//   org.apache.zookeeper.server.ZooKeeperServer.loadData(ZooKeeperServer.java:313)
+//   org.apache.zookeeper.server.ZooKeeperServer.startdata(ZooKeeperServer.java:461)
+//   org.apache.zookeeper.server.NettyServerCnxnFactory.startup(NettyServerCnxnFactory.java:551)
+//   org.apache.zookeeper.server.ServerCnxnFactory.startup(ServerCnxnFactory.java:102)
+//   org.apache.zookeeper.server.ZooKeeperServerMain.runFromConfig(ZooKeeperServerMain.java:172)
+//   org.apache.zookeeper.server.ZooKeeperServerMain.initializeAndRun(ZooKeeperServerMain.java:119)
+//   org.apache.zookeeper.server.ZooKeeperServerMain.main(ZooKeeperServerMain.java:68)
+//   org.apache.zookeeper.server.quorum.QuorumPeerMain.initializeAndRun(QuorumPeerMain.java:142)
+//   org.apache.zookeeper.server.quorum.QuorumPeerMain.main(QuorumPeerMain.java:94)
+        // 手握两个apache顶级项目
+        // 什么offer拿不到
+        // 一个zk 分布式注册中心
+        // 一个redis,搞缓存
+        // 一个消息队列
+        // 一个rpc框架
+        // 一个更加重量级的东西---Netty
+        // 
+
         long lastZxid = dataTree.lastProcessedZxid;
         File snapshotFile = new File(snapDir, Util.makeSnapshotName(lastZxid));
         LOG.info("Snapshotting: 0x{} to {}", Long.toHexString(lastZxid),

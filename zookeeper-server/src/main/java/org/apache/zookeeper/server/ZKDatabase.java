@@ -57,10 +57,14 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 /**
- * This class maintains the in memory database of zookeeper
- * server states that includes the sessions, datatree and the
- * committed logs. It is booted up  after reading the logs
- * and snapshots from the disk.
+ *
+ * 这个类非常重要,
+ * 此类维护Zookeeper服务器状态的内存数据库,其中包括session,data Tree和已提交的日志.
+ *
+ * 在启动之前,会从磁盘中读取数据和快照.
+ * 因为zookeeper中的数据是可以持久化的,
+ * 当zookeeper 服务因合理或不合理的原因停止后,再次启动的时候,就需要从磁盘中读取数据.
+ *
  */
 public class ZKDatabase {
 
@@ -77,6 +81,8 @@ public class ZKDatabase {
 
     /**
      * Default value is to use snapshot if txnlog size exceeds 1/3 the size of snapshot
+     *
+     * 如果txnlog大小超过快照大小的1/3,则默认使用快照
      */
     public static final String SNAPSHOT_SIZE_FACTOR = "zookeeper.snapshotSizeFactor";
     public static final double DEFAULT_SNAPSHOT_SIZE_FACTOR = 0.33;
@@ -89,20 +95,29 @@ public class ZKDatabase {
     volatile private boolean initialized = false;
 
     /**
+     *
+     * 之前阅读过{@linK FileTxnSnapLog}的源码,zk的数据和快照目录都在这个类中.
+     *
      * the filetxnsnaplog that this zk database
      * maps to. There is a one to one relationship
      * between a filetxnsnaplog and zkdatabase.
      * @param snapLog the FileTxnSnapLog mapping this zkdatabase
+     *
+     *
+     *
      */
     public ZKDatabase(FileTxnSnapLog snapLog) {
+        // 先创建一棵树
         dataTree = createDataTree();
         sessionsWithTimeouts = new ConcurrentHashMap<Long, Integer>();
         this.snapLog = snapLog;
 
         try {
+            // 设置快照的大小
             snapshotSizeFactor = Double.parseDouble(
                 System.getProperty(SNAPSHOT_SIZE_FACTOR,
                         Double.toString(DEFAULT_SNAPSHOT_SIZE_FACTOR)));
+
             if (snapshotSizeFactor > 1) {
                 snapshotSizeFactor = DEFAULT_SNAPSHOT_SIZE_FACTOR;
                 LOG.warn("The configured {} is invalid, going to use " +
@@ -224,15 +239,14 @@ public class ZKDatabase {
         return sessionsWithTimeouts;
     }
 
-    private final PlayBackListener commitProposalPlaybackListener = new PlayBackListener() {
-        public void onTxnLoaded(TxnHeader hdr, Record txn){
-            addCommittedProposal(hdr, txn);
-        }
-    };
+    private final PlayBackListener commitProposalPlaybackListener = (hdr,txn)-> addCommittedProposal(hdr, txn);
 
     /**
      * load the database from the disk onto memory and also add
      * the transactions to the committedlog in memory.
+     *
+     * 从磁盘将数据库加载到内存中,并将事务添加到内存中的commitlog中.
+     *
      * @return the last valid zxid on disk
      * @throws IOException
      */

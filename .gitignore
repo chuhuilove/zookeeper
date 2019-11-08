@@ -59,6 +59,7 @@ tmp/**/*
 *.swp
 .ant-targets-build.xml
 zkdata/
+zkdataLog/
 # C
 tags
 .cproject

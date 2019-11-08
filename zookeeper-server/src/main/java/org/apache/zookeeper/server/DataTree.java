@@ -68,6 +68,14 @@ import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 
 /**
+ * 该类维护tree数据结构.
+ * 该树维护两个并行的数据结构:
+ * 1.一个散列表(从完整路径映射到DataNode)
+ * 2.一个DataNode树
+ * 对路径的所有访问都是通过散列表.
+ * 只有在序列化到磁盘时才会遍历树.
+ *
+ *
  * This class maintains the tree data structure. It doesn't have any networking
  * or client connection code in it so that it can be tested in a stand alone
  * way.
@@ -80,7 +88,7 @@ public class DataTree {
     private static final Logger LOG = LoggerFactory.getLogger(DataTree.class);
 
     /**
-     * This hashtable provides a fast lookup to the datanodes. The tree is the
+     * 这个散列表提供了对datanode的快速查找. The tree is the
      * source of truth and is where all the locking occurs
      */
     private final ConcurrentHashMap<String, DataNode> nodes =

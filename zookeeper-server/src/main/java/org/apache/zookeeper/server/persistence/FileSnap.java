@@ -65,10 +65,13 @@ public class FileSnap implements SnapShot {
 
     /**
      * deserialize a data tree from the most recent snapshot
+     * 反序列化来自最新快照的数据树
      * @return the zxid of the snapshot
      */
+    @Override
     public long deserialize(DataTree dt, Map<Long, Integer> sessions)
             throws IOException {
+        //
         // we run through 100 snapshots (not all of them)
         // if we cannot get it running within 100 snapshots
         // we should  give up

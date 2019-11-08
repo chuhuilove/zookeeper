@@ -164,8 +164,11 @@ public class ZooKeeperServerMain {
             // 先搭建集群....
             boolean needStartZKServer = true;
             if (config.getClientPortAddress() != null) {
+                // 创建一个socket工厂
                 cnxnFactory = ServerCnxnFactory.createFactory();
+                // 配置端口
                 cnxnFactory.configure(config.getClientPortAddress(), config.getMaxClientCnxns(), false);
+                // 启动服务
                 cnxnFactory.startup(zkServer);
                 // zkServer has been started. So we don't need to start it again in secureCnxnFactory.
                 needStartZKServer = false;

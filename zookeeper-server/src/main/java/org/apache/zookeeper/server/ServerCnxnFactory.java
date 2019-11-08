@@ -208,11 +208,16 @@ public abstract class ServerCnxnFactory {
     }
 
     /**
-     * Initialize the server SASL if specified.
+     *
+     * 配置Sasl?不知道是什么...
+     *
+     * 如果指定,初始化服务器SASL.
      *
      * If the user has specified a "ZooKeeperServer.LOGIN_CONTEXT_NAME_KEY"
      * or a jaas.conf using "java.security.auth.login.config"
      * the authentication is required and an exception is raised.
+     *
+     * 否则,不会配置任何身份验证,也不会引发任何异常.
      * Otherwise no authentication is configured and no exception is raised.
      *
      * @throws IOException if jaas.conf is missing or there's an error in it.

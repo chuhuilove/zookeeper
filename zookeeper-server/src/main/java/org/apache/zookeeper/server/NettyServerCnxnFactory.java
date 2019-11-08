@@ -74,6 +74,9 @@ import static org.apache.zookeeper.ZKUtil.logStackInfo;
 
 /**
  * 基于Netty的服务端上下文通信框架
+ *
+ * 若要封神,Netty这一关,必须是要过的.
+ *
  */
 public class NettyServerCnxnFactory extends ServerCnxnFactory {
     private static final Logger LOG = LoggerFactory.getLogger(NettyServerCnxnFactory.class);
@@ -101,14 +104,20 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
      * This is an inner class since we need to extend ChannelDuplexHandler, but
      * NettyServerCnxnFactory already extends ServerCnxnFactory. By making it inner
      * this class gets access to the member variables and methods.
+     * <p>
+     * 由于{@code CnxnChannelHandler}继承了{@code ChannelDuplexHandler}
+     * 所以,出站和入站的时候,都会调用到这个类
      */
     @Sharable
     class CnxnChannelHandler extends ChannelDuplexHandler {
 
         @Override
         public void channelActive(ChannelHandlerContext ctx) throws Exception {
+            /**
+             * 每个客户端上线,都会调用到这个函数
+             */
             if (LOG.isTraceEnabled()) {
-                LOG.trace("Channel active {}", ctx.channel());
+                LOG.trace("cyzi:Channel active {}", ctx.channel());
             }
 
             NettyServerCnxn cnxn = new NettyServerCnxn(ctx.channel(),
@@ -127,8 +136,11 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
 
         @Override
         public void channelInactive(ChannelHandlerContext ctx) throws Exception {
+            /**
+             * 每一个客户端掉线,都会调用到这个函数
+             */
             if (LOG.isTraceEnabled()) {
-                LOG.trace("Channel inactive {}", ctx.channel());
+                LOG.trace("cyzi:Channel inactive {}", ctx.channel());
             }
             allChannels.remove(ctx.channel());
             NettyServerCnxn cnxn = ctx.channel().attr(CONNECTION_ATTRIBUTE).getAndSet(null);
@@ -174,11 +186,16 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
             }
         }
 
+
         @Override
         public void channelRead(ChannelHandlerContext ctx, Object msg) throws Exception {
+            /**
+             * 每次消息过来,都要走这个地方
+             */
             try {
                 if (LOG.isTraceEnabled()) {
-                    LOG.trace("message received called {}", msg);
+
+                    LOG.trace("cyzi:message received called {}", msg);
                 }
                 try {
                     if (LOG.isDebugEnabled()) {
@@ -313,9 +330,18 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
                         pipeline.addLast("servercnxnfactory", channelHandler);
                     }
                 });
+
+
         this.bootstrap = configureBootstrapAllocator(bootstrap);
         this.bootstrap.validate();
-        logStackInfo(getClass().getName());
+
+        /**
+         * 这里只做了一写Netty的初始化工作,还没有正式启动Netty服务
+         * 比如,这里端口之类的,还没有绑定.
+         *
+         */
+
+
     }
 
     private synchronized void initSSL(ChannelPipeline p)
@@ -399,13 +425,17 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
         this.secure = secure;
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public int getMaxClientCnxnsPerHost() {
         return maxClientCnxns;
     }
 
-    /** {@inheritDoc} */
+    /**
+     * {@inheritDoc}
+     */
     @Override
     public void setMaxClientCnxnsPerHost(int max) {
         maxClientCnxns = max;
@@ -480,12 +510,15 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
 
     @Override
     public void start() {
-        logStackInfo(getClass().getName());
 
         LOG.info("binding to port {}", localAddress);
         parentChannel = bootstrap.bind(localAddress).syncUninterruptibly().channel();
         // Port changes after bind() if the original port was 0, update
         // localAddress to get the real port.
+        /**
+         * 如果原始端口为0,则bind()之后的端口会更改,
+         * 则更新localAddress以获取实际端口.
+         */
         localAddress = (InetSocketAddress) parentChannel.localAddress();
         LOG.info("bound to port " + getLocalPort());
     }
@@ -510,7 +543,9 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
     @Override
     public void startup(ZooKeeperServer zks, boolean startServer)
             throws IOException, InterruptedException {
+        // 启动Netty服务
         start();
+        // 设置zookeeper服务...
         setZooKeeperServer(zks);
         if (startServer) {
             zks.startdata();
@@ -582,6 +617,7 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
      * Sets the test ByteBufAllocator. This allocator will be used by all
      * future instances of this class.
      * It is not recommended to use this method outside of testing.
+     *
      * @param allocator the ByteBufAllocator to use for all netty buffer
      *                  allocations.
      */

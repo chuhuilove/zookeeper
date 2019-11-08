@@ -147,6 +147,7 @@ public class Util {
     }
 
     /**
+     * 判断该文件是不是有效的snapshot文件
      * Verifies that the file is a valid snapshot. Snapshot may be invalid if 
      * it's incomplete as in a situation when the server dies while in the process
      * of storing a snapshot. Any file that is not a snapshot is also 
@@ -157,13 +158,16 @@ public class Util {
      * @throws IOException
      */
     public static boolean isValidSnapshot(File f) throws IOException {
-        if (f==null || Util.getZxidFromName(f.getName(), FileSnap.SNAPSHOT_FILE_PREFIX) == -1)
+        // 先判断文件名称是否合法
+        if (f==null || Util.getZxidFromName(f.getName(), FileSnap.SNAPSHOT_FILE_PREFIX) == -1){
             return false;
+        }
 
         // Check for a valid snapshot
         try (RandomAccessFile raf = new RandomAccessFile(f, "r")) {
             // including the header and the last / bytes
             // the snapshot should be at least 10 bytes
+            // 如果snapshot文件小于10个字节,就认为不合法
             if (raf.length() < 10) {
                 return false;
             }
@@ -288,8 +292,9 @@ public class Util {
      */
     public static List<File> sortDataDir(File[] files, String prefix, boolean ascending)
     {
-        if(files==null)
+        if(files==null){
             return new ArrayList<File>(0);
+        }
         List<File> filelist = Arrays.asList(files);
         Collections.sort(filelist, new DataDirFileComparator(prefix, ascending));
         return filelist;
