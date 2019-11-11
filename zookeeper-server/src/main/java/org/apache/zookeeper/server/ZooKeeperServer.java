@@ -293,6 +293,7 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         }
         else {
             // 如果还没有初始化
+            //
             setZxid(zkDb.loadDataBase());
         }
         
@@ -452,7 +453,10 @@ public class ZooKeeperServer implements SessionExpirer, ServerStats.Provider {
         /**
          * 因为在ZooKeeperServerMain的runFromConfig的函数中
          * 创建ZooKeeperServer的时候,没有给zkDb设置值
-         * 所以这里需要判断一下
+         * 所以这里需要判断一下.
+         *
+         * 创建一个db对象的机制
+         *
          */
         if (zkDb == null) {
             zkDb = new ZKDatabase(this.txnLogFactory);

@@ -658,8 +658,6 @@ public class NIOServerCnxnFactory extends ServerCnxnFactory {
          * NIOServerCnxnFactory.java:645
          */
 
-
-
         if (secure) {
             throw new UnsupportedOperationException("SSL isn't supported in NIOServerCnxn");
         }

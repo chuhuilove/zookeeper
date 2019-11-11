@@ -47,9 +47,8 @@ import static org.apache.zookeeper.ZKUtil.logStackInfo;
  * above the implementations
  * of txnlog and snapshot
  * classes
- *
+ * <p>
  * 处理快照和事务的帮助类
- *
  */
 public class FileTxnSnapLog {
     //the direcotry containing the
@@ -88,13 +87,13 @@ public class FileTxnSnapLog {
     }
 
     /**
-     *
      * 初始化两个目录:
      * 数据目录和快照目录.
      * 做一些校验工作等....
-     *
+     * <p>
      * the constructor which takes the datadir and
      * snapdir.
+     *
      * @param dataDir 事务目录,就是我们传统认为,存储数据的位置the transaction directory
      * @param snapDir 存放快照的目录the snapshot directory
      */
@@ -200,6 +199,7 @@ public class FileTxnSnapLog {
     /**
      * get the datadir used by this filetxn
      * snap log
+     *
      * @return the data dir
      */
     public File getDataDir() {
@@ -209,6 +209,7 @@ public class FileTxnSnapLog {
     /**
      * get the snap dir used by this
      * filetxn snap log
+     *
      * @return the snap dir
      */
     public File getSnapDir() {
@@ -219,24 +220,35 @@ public class FileTxnSnapLog {
      * this function restores the server
      * database after reading from the
      * snapshots and transaction logs
-     *
+     * <p>
      * 从快照和事务日志中读取数据后,此函数将还原服务器数据库
      *
-     * @param dt the datatree to be restored
+     * @param dt       the datatree to be restored
      * @param sessions the sessions to be restored
      * @param listener the playback listener to run on the
-     * database restoration
+     *                 database restoration
      * @return the highest zxid restored
      * @throws IOException
      */
     public long restore(DataTree dt, Map<Long, Integer> sessions,
                         PlayBackListener listener) throws IOException {
 
+        /**
+         * 获取到序列化结果,
+         * 如果在磁盘上没有文件,则序列化结果返回值为-1L.
+         * // 反序列化这一块比较复杂...暂时先放着
+         */
         long deserializeResult = snapLog.deserialize(dt, sessions);
         FileTxnLog txnLog = new FileTxnLog(dataDir);
         if (-1L == deserializeResult) {
-            /* this means that we couldn't find any snapshot, so we need to
-             * initialize an empty database (reported in ZOOKEEPER-2325) */
+            /**
+             * 如果反序列化的结果返回-1L
+             * 这意味着在数据目录中没有snapshot文件,
+             * 所以我们需要初始化一个空的数据库.
+            this means that we couldn't find any snapshot, so we need to
+             * initialize an empty database (reported in ZOOKEEPER-2325)
+              *
+              * */
             if (txnLog.getLastLoggedZxid() != -1) {
                 throw new IOException(
                         "No snapshot found, but there are log entries. " +
@@ -255,10 +267,11 @@ public class FileTxnSnapLog {
      * This function will fast forward the server database to have the latest
      * transactions in it.  This is the same as restore, but only reads from
      * the transaction logs and not restores from a snapshot.
-     * @param dt the datatree to write transactions to.
+     *
+     * @param dt       the datatree to write transactions to.
      * @param sessions the sessions to be restored.
      * @param listener the playback listener to run on the
-     * database transactions.
+     *                 database transactions.
      * @return the highest zxid restored.
      * @throws IOException
      */
@@ -314,10 +327,10 @@ public class FileTxnSnapLog {
     /**
      * Get TxnIterator for iterating through txnlog starting at a given zxid
      *
-     * @param zxid starting zxid
+     * @param zxid        starting zxid
      * @param fastForward true if the iterator should be fast forwarded to point
-     *        to the txn of a given zxid, else the iterator will point to the
-     *        starting txn of a txnlog that may contain txn of a given zxid
+     *                    to the txn of a given zxid, else the iterator will point to the
+     *                    starting txn of a txnlog that may contain txn of a given zxid
      * @return TxnIterator
      * @throws IOException
      */
@@ -329,10 +342,11 @@ public class FileTxnSnapLog {
 
     /**
      * process the transaction on the datatree
-     * @param hdr the hdr of the transaction
-     * @param dt the datatree to apply transaction to
+     *
+     * @param hdr      the hdr of the transaction
+     * @param dt       the datatree to apply transaction to
      * @param sessions the sessions to be restored
-     * @param txn the transaction to be applied
+     * @param txn      the transaction to be applied
      */
     public void processTransaction(TxnHeader hdr, DataTree dt,
                                    Map<Long, Integer> sessions, Record txn)
@@ -380,6 +394,7 @@ public class FileTxnSnapLog {
 
     /**
      * the last logged zxid on the transaction logs
+     *
      * @return the last logged zxid
      */
     public long getLastLoggedZxid() {
@@ -389,15 +404,15 @@ public class FileTxnSnapLog {
 
     /**
      * save the datatree and the sessions into a snapshot
-     * @param dataTree the datatree to be serialized onto disk
+     *
+     * @param dataTree             the datatree to be serialized onto disk
      * @param sessionsWithTimeouts the session timeouts to be
-     * serialized onto disk
+     *                             serialized onto disk
      * @throws IOException
      */
     public void save(DataTree dataTree,
                      ConcurrentHashMap<Long, Integer> sessionsWithTimeouts)
             throws IOException {
-
 
 
         // 创建 snapshot的调用链
@@ -428,6 +443,7 @@ public class FileTxnSnapLog {
         File snapshotFile = new File(snapDir, Util.makeSnapshotName(lastZxid));
         LOG.info("Snapshotting: 0x{} to {}", Long.toHexString(lastZxid),
                 snapshotFile);
+        //
         snapLog.serialize(dataTree, sessionsWithTimeouts, snapshotFile);
 
     }
@@ -435,6 +451,7 @@ public class FileTxnSnapLog {
     /**
      * truncate the transaction logs the zxid
      * specified
+     *
      * @param zxid the zxid to truncate the logs to
      * @return true if able to truncate the log, false if not
      * @throws IOException
@@ -461,6 +478,7 @@ public class FileTxnSnapLog {
     /**
      * the most recent snapshot in the snapshot
      * directory
+     *
      * @return the file that contains the most
      * recent snapshot
      * @throws IOException
@@ -472,6 +490,7 @@ public class FileTxnSnapLog {
 
     /**
      * the n most recent snapshots
+     *
      * @param n the number of recent snapshots
      * @return the list of n most recent snapshots, with
      * the most recent in front
@@ -487,8 +506,9 @@ public class FileTxnSnapLog {
      * This includes logs with starting zxid greater than given zxid, as well as the
      * newest transaction log with starting zxid less than given zxid.  The latter log
      * file may contain transactions beyond given zxid.
+     *
      * @param zxid the zxid that contains logs greater than
-     * zxid
+     *             zxid
      * @return
      */
     public File[] getSnapshotLogs(long zxid) {
@@ -497,8 +517,9 @@ public class FileTxnSnapLog {
 
     /**
      * append the request to the transaction logs
+     *
      * @param si the request to be appended
-     * returns true iff something appended, otw false
+     *           returns true iff something appended, otw false
      * @throws IOException
      */
     public boolean append(Request si) throws IOException {
@@ -507,6 +528,7 @@ public class FileTxnSnapLog {
 
     /**
      * commit the transaction of logs
+     *
      * @throws IOException
      */
     public void commit() throws IOException {
@@ -514,7 +536,6 @@ public class FileTxnSnapLog {
     }
 
     /**
-     *
      * @return elapsed sync time of transaction log commit in milliseconds
      */
     public long getTxnLogElapsedSyncTime() {
@@ -523,6 +544,7 @@ public class FileTxnSnapLog {
 
     /**
      * roll the transaction logs
+     *
      * @throws IOException
      */
     public void rollLog() throws IOException {
@@ -531,6 +553,7 @@ public class FileTxnSnapLog {
 
     /**
      * close the transaction log files
+     *
      * @throws IOException
      */
     public void close() throws IOException {

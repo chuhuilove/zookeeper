@@ -1101,9 +1101,10 @@ public class ClientCnxn {
          * @throws IOException
          */
         private void startConnect(InetSocketAddress addr) throws IOException {
-            // initializing it for new connection
+            // 初始化一个连接
             //
             saslLoginFailed = false;
+            // 如果不是第一次连接
             if(!isFirstConnect){
                 try {
                     Thread.sleep(r.nextInt(1000));
@@ -1111,8 +1112,8 @@ public class ClientCnxn {
                     LOG.warn("Unexpected exception", e);
                 }
             }
+            // 1. 将连接状态修改成连接中
             state = States.CONNECTING;
-
             String hostPort = addr.getHostString() + ":" + addr.getPort();
             MDC.put("myid", hostPort);
             setName(getName().replaceAll("\\(.*\\)", "(" + hostPort + ")"));
@@ -1139,7 +1140,6 @@ public class ClientCnxn {
             logStartConnect(addr);
 
             // 前面做了一堆准备工作,现在开始连接
-
             clientCnxnSocket.connect(addr);
         }
 
@@ -1182,10 +1182,11 @@ public class ClientCnxn {
                             rwServerAddress = null;
                         } else {
                             /**
-                             * 获取一个
+                             * 获取一个IP地址
                              */
                             serverAddress = hostProvider.next(1000);
                         }
+                        // 和服务端进行socket连接
                         startConnect(serverAddress);
                         clientCnxnSocket.updateLastSendAndHeard();
                     }
@@ -1570,11 +1571,13 @@ public class ClientCnxn {
         Packet packet = queuePacket(h, r, request, response, null, null, null,
                 null, watchRegistration, watchDeregistration);
         synchronized (packet) {
+
             if (requestTimeout > 0) {
                 // Wait for request completion with timeout
                 waitForPacketFinish(r, packet);
             } else {
                 // Wait for request completion infinitely
+                // 请求包发送出去以后,阻塞等待从服务端的数据
                 while (!packet.finished) {
                     packet.wait();
                 }
@@ -1647,7 +1650,7 @@ public class ClientCnxn {
         packet.clientPath = clientPath;
         packet.serverPath = serverPath;
         packet.watchDeregistration = watchDeregistration;
-        // The synchronized block here is for two purpose:
+        // 这里的同步块有两个用途:
         // 1. synchronize with the final cleanup() in SendThread.run() to avoid race
         // 2. synchronized against each packet. So if a closeSession packet is added,
         // later packet will be notified.
@@ -1660,6 +1663,7 @@ public class ClientCnxn {
                 if (h.getType() == OpCode.closeSession) {
                     closing = true;
                 }
+                // 将请求packet添加到同步队列中
                 outgoingQueue.add(packet);
             }
         }

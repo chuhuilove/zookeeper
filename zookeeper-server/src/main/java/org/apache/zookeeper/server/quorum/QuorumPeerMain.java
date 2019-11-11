@@ -56,7 +56,7 @@ import org.apache.zookeeper.server.quorum.QuorumPeerConfig.ConfigException;
  * configuration information. This file is a Properties file, so keys and
  * values are separated by equals (=) and the key/value pairs are separated
  * by new lines. The following is a general summary of keys used in the
- * configuration file. For full details on this see the documentation in
+ * configuration file. For full details on this see the document ation in
  * docs/index.html
  * <ol>
  * <li>dataDir - The directory where the ZooKeeper data is stored.</li>

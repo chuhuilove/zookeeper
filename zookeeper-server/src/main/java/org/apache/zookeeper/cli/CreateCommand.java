@@ -65,6 +65,11 @@ public class CreateCommand extends CliCommand {
 
     @Override
     public boolean exec() throws CliException {
+
+        /**
+         * 执行 create 命令
+         */
+
         boolean hasE = cl.hasOption("e");
         boolean hasS = cl.hasOption("s");
         boolean hasC = cl.hasOption("c");
@@ -116,6 +121,7 @@ public class CreateCommand extends CliCommand {
             acl = AclParser.parse(args[3]);
         }
         try {
+            // 前面执行一对校验,开始正式的执行创建逻辑
             String newPath = hasT ? zk.create(path, data, acl, flags, new Stat(), ttl) : zk.create(path, data, acl, flags);
             err.println("Created " + newPath);
         } catch(IllegalArgumentException ex) {

@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -25,6 +25,7 @@ import java.io.IOException;
 import java.io.RandomAccessFile;
 import java.io.Serializable;
 import java.net.URI;
+import java.net.URISyntaxException;
 import java.nio.ByteBuffer;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -47,38 +48,39 @@ import org.apache.zookeeper.txn.TxnHeader;
  */
 public class Util {
     private static final Logger LOG = LoggerFactory.getLogger(Util.class);
-    private static final String SNAP_DIR="snapDir";
-    private static final String LOG_DIR="logDir";
-    private static final String DB_FORMAT_CONV="dbFormatConversion";
-    
-    public static String makeURIString(String dataDir, String dataLogDir, 
-            String convPolicy){
-        String uri="file:"+SNAP_DIR+"="+dataDir+";"+LOG_DIR+"="+dataLogDir;
-        if(convPolicy!=null)
-            uri+=";"+DB_FORMAT_CONV+"="+convPolicy;
+    private static final String SNAP_DIR = "snapDir";
+    private static final String LOG_DIR = "logDir";
+    private static final String DB_FORMAT_CONV = "dbFormatConversion";
+
+    public static String makeURIString(String dataDir, String dataLogDir,
+                                       String convPolicy) {
+        String uri = "file:" + SNAP_DIR + "=" + dataDir + ";" + LOG_DIR + "=" + dataLogDir;
+        if (convPolicy != null)
+            uri += ";" + DB_FORMAT_CONV + "=" + convPolicy;
         return uri.replace('\\', '/');
     }
+
     /**
      * Given two directory files the method returns a well-formed 
      * logfile provider URI. This method is for backward compatibility with the
      * existing code that only supports logfile persistence and expects these two
      * parameters passed either on the command-line or in the configuration file.
-     * 
+     *
      * @param dataDir snapshot directory
      * @param dataLogDir transaction log directory
      * @return logfile provider URI
      */
-    public static URI makeFileLoggerURL(File dataDir, File dataLogDir){
-        return URI.create(makeURIString(dataDir.getPath(),dataLogDir.getPath(),null));
+    public static URI makeFileLoggerURL(File dataDir, File dataLogDir) {
+        return URI.create(makeURIString(dataDir.getPath(), dataLogDir.getPath(), null));
     }
-    
-    public static URI makeFileLoggerURL(File dataDir, File dataLogDir,String convPolicy){
-        return URI.create(makeURIString(dataDir.getPath(),dataLogDir.getPath(),convPolicy));
+
+    public static URI makeFileLoggerURL(File dataDir, File dataLogDir, String convPolicy) {
+        return URI.create(makeURIString(dataDir.getPath(), dataLogDir.getPath(), convPolicy));
     }
 
     /**
      * Creates a valid transaction log file name. 
-     * 
+     *
      * @param zxid used as a file name suffix (extension)
      * @return file name
      */
@@ -88,48 +90,48 @@ public class Util {
 
     /**
      * Creates a snapshot file name.
-     * 
+     *
      * @param zxid used as a suffix
      * @return file name
      */
     public static String makeSnapshotName(long zxid) {
         return FileSnap.SNAPSHOT_FILE_PREFIX + "." + Long.toHexString(zxid);
     }
-    
+
     /**
      * Extracts snapshot directory property value from the container.
-     * 
+     *
      * @param props properties container
      * @return file representing the snapshot directory
      */
-    public static File getSnapDir(Properties props){
+    public static File getSnapDir(Properties props) {
         return new File(props.getProperty(SNAP_DIR));
     }
 
     /**
      * Extracts transaction log directory property value from the container.
-     * 
+     *
      * @param props properties container
      * @return file representing the txn log directory
      */
-    public static File getLogDir(Properties props){
+    public static File getLogDir(Properties props) {
         return new File(props.getProperty(LOG_DIR));
     }
-    
+
     /**
      * Extracts the value of the dbFormatConversion attribute.
-     * 
+     *
      * @param props properties container
      * @return value of the dbFormatConversion attribute
      */
-    public static String getFormatConversionPolicy(Properties props){
+    public static String getFormatConversionPolicy(Properties props) {
         return props.getProperty(DB_FORMAT_CONV);
     }
-   
+
     /**
      * Extracts zxid from the file name. The file name should have been created
      * using one of the {@link #makeLogName(long)} or {@link #makeSnapshotName(long)}.
-     * 
+     *
      * @param name the file name to parse
      * @param prefix the file name prefix (snapshot or log)
      * @return zxid
@@ -152,14 +154,14 @@ public class Util {
      * it's incomplete as in a situation when the server dies while in the process
      * of storing a snapshot. Any file that is not a snapshot is also 
      * an invalid snapshot. 
-     * 
+     *
      * @param f file to verify
      * @return true if the snapshot is valid
      * @throws IOException
      */
     public static boolean isValidSnapshot(File f) throws IOException {
         // 先判断文件名称是否合法
-        if (f==null || Util.getZxidFromName(f.getName(), FileSnap.SNAPSHOT_FILE_PREFIX) == -1){
+        if (f == null || Util.getZxidFromName(f.getName(), FileSnap.SNAPSHOT_FILE_PREFIX) == -1) {
             return false;
         }
 
@@ -171,6 +173,8 @@ public class Util {
             if (raf.length() < 10) {
                 return false;
             }
+            // 设置文件指针的位置
+            // 假如文件大小为110,则将当前文件指针设置到110-5的位置
             raf.seek(raf.length() - 5);
             byte bytes[] = new byte[5];
             int readlen = 0;
@@ -179,11 +183,29 @@ public class Util {
                     (l = raf.read(bytes, readlen, bytes.length - readlen)) >= 0) {
                 readlen += l;
             }
+            // 从文件当前指针的位置,到文件末尾
+            // 如果不够5个字节,则认为是无效的文件
             if (readlen != bytes.length) {
                 LOG.info("Invalid snapshot " + f
                         + " too short, len = " + readlen);
                 return false;
             }
+
+            // 字节数组中,如果前四个字节构不成数字1
+            // 或者最后一个字节不是/
+            // 则认为该文件不合法.
+            // 一个字节数组
+
+            // 验证的最终极格式:
+            // 最后5个字节,前四个是int型的数字1
+            // 最后一个字节是字符/,也就是ascii的地47个字符
+            // 下面这段代码可以绕过验证
+
+//            ByteBuffer bb=ByteBuffer.allocateDirect(5);
+//            bb.putInt(1);
+//            bb.put((byte)47);
+//            bb.flip();
+
             ByteBuffer bb = ByteBuffer.wrap(bytes);
             int len = bb.getInt();
             byte b = bb.get();
@@ -205,7 +227,7 @@ public class Util {
      * @throws IOException
      */
     public static byte[] readTxnBytes(InputArchive ia) throws IOException {
-        try{
+        try {
             byte[] bytes = ia.readBuffer("txtEntry");
             // Since we preallocate, we define EOF to be an
             // empty transaction
@@ -216,14 +238,15 @@ public class Util {
                 return null;
             }
             return bytes;
-        }catch(EOFException e){}
+        } catch (EOFException e) {
+        }
         return null;
     }
-    
+
 
     /**
      * Serializes transaction header and transaction data into a byte buffer.
-     *  
+     *
      * @param hdr transaction header
      * @param txn transaction data
      * @return serialized transaction record
@@ -243,7 +266,7 @@ public class Util {
 
     /**
      * Write the serialized transaction record to the output archive.
-     *  
+     *
      * @param oa output archive
      * @param bytes serialized transaction record
      * @throws IOException
@@ -253,19 +276,19 @@ public class Util {
         oa.writeBuffer(bytes, "txnEntry");
         oa.writeByte((byte) 0x42, "EOR"); // 'B'
     }
-    
-    
+
+
     /**
      * Compare file file names of form "prefix.version". Sort order result
      * returned in order of version.
      */
     private static class DataDirFileComparator
-        implements Comparator<File>, Serializable
-    {
+            implements Comparator<File>, Serializable {
         private static final long serialVersionUID = -2648639884525140318L;
 
         private String prefix;
         private boolean ascending;
+
         public DataDirFileComparator(String prefix, boolean ascending) {
             this.prefix = prefix;
             this.ascending = ascending;
@@ -278,7 +301,7 @@ public class Util {
             return ascending ? result : -result;
         }
     }
-    
+
     /**
      * Sort the list of files. Recency as determined by the version component
      * of the file name.
@@ -290,9 +313,8 @@ public class Util {
      * descending order
      * @return sorted input files
      */
-    public static List<File> sortDataDir(File[] files, String prefix, boolean ascending)
-    {
-        if(files==null){
+    public static List<File> sortDataDir(File[] files, String prefix, boolean ascending) {
+        if (files == null) {
             return new ArrayList<File>(0);
         }
         List<File> filelist = Arrays.asList(files);
@@ -319,5 +341,5 @@ public class Util {
     public static boolean isSnapshotFileName(String fileName) {
         return fileName.startsWith(FileSnap.SNAPSHOT_FILE_PREFIX + ".");
     }
-    
+
 }

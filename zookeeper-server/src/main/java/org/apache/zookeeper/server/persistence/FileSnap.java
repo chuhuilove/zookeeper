@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -17,6 +17,7 @@
  */
 
 package org.apache.zookeeper.server.persistence;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
 import java.io.File;
@@ -75,16 +76,19 @@ public class FileSnap implements SnapShot {
         // we run through 100 snapshots (not all of them)
         // if we cannot get it running within 100 snapshots
         // we should  give up
+        // 拿到验证好的以snapshot开头的文件
         List<File> snapList = findNValidSnapshots(100);
         if (snapList.size() == 0) {
             return -1L;
         }
         File snap = null;
         boolean foundValid = false;
-        for (int i = 0, snapListSize = snapList.size(); i < snapListSize; i++) {
+        for (int i = 0; i < snapList.size(); i++) {
             snap = snapList.get(i);
             LOG.info("Reading snapshot " + snap);
+            // 开始读取文件
             try (InputStream snapIS = new BufferedInputStream(new FileInputStream(snap));
+                 // 文件流用adler32算法来校验
                  CheckedInputStream crcIn = new CheckedInputStream(snapIS, new Adler32())) {
                 InputArchive ia = BinaryInputArchive.getArchive(crcIn);
                 deserialize(dt, sessions, ia);
@@ -108,21 +112,24 @@ public class FileSnap implements SnapShot {
 
     /**
      * deserialize the datatree from an inputarchive
+     * 从输入对象反序列化数据树
      * @param dt the datatree to be serialized into
      * @param sessions the sessions to be filled up
      * @param ia the input archive to restore from
      * @throws IOException
      */
     public void deserialize(DataTree dt, Map<Long, Integer> sessions,
-            InputArchive ia) throws IOException {
+                            InputArchive ia) throws IOException {
         FileHeader header = new FileHeader();
+        // 从文件中,获取FileHeader
+        // 验证文件头是否匹配
         header.deserialize(ia, "fileheader");
         if (header.getMagic() != SNAP_MAGIC) {
             throw new IOException("mismatching magic headers "
                     + header.getMagic() +
                     " !=  " + FileSnap.SNAP_MAGIC);
         }
-        SerializeUtils.deserializeSnapshot(dt,ia,sessions);
+        SerializeUtils.deserializeSnapshot(dt, ia, sessions);
     }
 
     /**
@@ -149,10 +156,21 @@ public class FileSnap implements SnapShot {
      * less than n in case enough snapshots are not available).
      * @throws IOException
      */
+
     private List<File> findNValidSnapshots(int n) throws IOException {
+
+        /**
+         * {@link snapDir}是zkdataDir的根目录,从这里提取出前缀为"snapshot"的文件
+         */
         List<File> files = Util.sortDataDir(snapDir.listFiles(), SNAPSHOT_FILE_PREFIX, false);
         int count = 0;
         List<File> list = new ArrayList<File>();
+
+
+        /**
+         * 验证提取出来的文件,
+         * 验证的方式,在{@link Util#isValidSnapshot(File)}中有详细的注释
+         */
         for (File f : files) {
             // we should catch the exceptions
             // from the valid snapshot and continue
@@ -183,7 +201,7 @@ public class FileSnap implements SnapShot {
         List<File> files = Util.sortDataDir(snapDir.listFiles(), SNAPSHOT_FILE_PREFIX, false);
         int count = 0;
         List<File> list = new ArrayList<File>();
-        for (File f: files) {
+        for (File f : files) {
             if (count == n)
                 break;
             if (Util.getZxidFromName(f.getName(), SNAPSHOT_FILE_PREFIX) != -1) {
@@ -202,15 +220,15 @@ public class FileSnap implements SnapShot {
      * @param header the header of this snapshot
      * @throws IOException
      */
-    protected void serialize(DataTree dt,Map<Long, Integer> sessions,
-            OutputArchive oa, FileHeader header) throws IOException {
+    protected void serialize(DataTree dt, Map<Long, Integer> sessions,
+                             OutputArchive oa, FileHeader header) throws IOException {
         // this is really a programmatic error and not something that can
         // happen at runtime
-        if(header==null)
+        if (header == null)
             throw new IllegalStateException(
                     "Snapshot's not open for writing: uninitialized header");
         header.serialize(oa, "fileheader");
-        SerializeUtils.serializeSnapshot(dt,oa,sessions);
+        SerializeUtils.serializeSnapshot(dt, oa, sessions);
     }
 
     /**

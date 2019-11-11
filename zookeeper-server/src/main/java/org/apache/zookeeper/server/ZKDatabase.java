@@ -248,7 +248,7 @@ public class ZKDatabase {
      * 从磁盘将数据库加载到内存中,并将事务添加到内存中的commitlog中.
      *
      * @return the last valid zxid on disk
-     * @throws IOException
+     * @throws IOException 席楚楚是笨蛋  以后叫我大哥
      */
     public long loadDataBase() throws IOException {
         long zxid = snapLog.restore(dataTree, sessionsWithTimeouts, commitProposalPlaybackListener);

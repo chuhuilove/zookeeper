@@ -74,11 +74,10 @@ import static org.apache.zookeeper.client.ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_S
 /**
  * The command line client to ZooKeeper.
  * zookeeper基于命令行实现的客户端
- *
+ * <p>
  * 知道如何与服务端通信
  * 里面的线程安全的代码,还是非常值得阅读的..
  * 另外,里面调用命令行界面的功能,在以后开发的PrimeMinister中,也能用得到
- *
  */
 @InterfaceAudience.Public
 public class ZooKeeperMain {
@@ -163,7 +162,6 @@ public class ZooKeeperMain {
 
     /**
      * A storage class for both command line options and shell commands.
-     *
      */
     static class MyCommandOptions {
 
@@ -201,7 +199,7 @@ public class ZooKeeperMain {
         /**
          * Parses a command line that may contain one or more flags
          * before an optional command string
-         *
+         * <p>
          * 解析命令行参数
          *
          * @param args command line arguments
@@ -245,9 +243,9 @@ public class ZooKeeperMain {
         }
 
 
-
         /**
          * Breaks a string into command + arguments.
+         *
          * @param cmdstring string of form "cmd arg1 arg2..etc"
          * @return true if parsing succeeded.
          */
@@ -274,19 +272,20 @@ public class ZooKeeperMain {
 
     /**
      * zookeeper 客户端启动入口
+     *
      * @param args
      * @throws CliException
      * @throws IOException
      * @throws InterruptedException
      */
-    public static void main(String [] args) throws CliException, IOException, InterruptedException {
+    public static void main(String[] args) throws CliException, IOException, InterruptedException {
         ZooKeeperMain main = new ZooKeeperMain(args);
         main.run();
     }
+
     /**
      * Makes a list of possible completions, either for commands
      * or for zk nodes if the token to complete begins with /
-     *
      */
 
 
@@ -322,7 +321,6 @@ public class ZooKeeperMain {
         // 准备创建连接
         zk = new ZooKeeperAdmin(host, Integer.parseInt(cl.getOption("timeout")), new MyWatcher(), readOnly);
     }
-
 
 
     public ZooKeeperMain(String args[]) throws IOException, InterruptedException {
@@ -405,8 +403,11 @@ public class ZooKeeperMain {
 
     public void executeLine(String line) throws CliException, InterruptedException, IOException {
         if (!line.equals("")) {
+            // 解析命令
             cl.parseCommand(line);
+            // 将命令添加到history中
             addToHistory(commandCount, line);
+            // 开始处理命令
             processCmd(cl);
             commandCount++;
         }
@@ -415,9 +416,10 @@ public class ZooKeeperMain {
     /**
      * trim the quota tree to recover unwanted tree elements
      * in the quota's tree
-     * @param zk the zookeeper client
+     *
+     * @param zk   the zookeeper client
      * @param path the path to start from and go up and see if their
-     * is any unwanted parent in the path.
+     *             is any unwanted parent in the path.
      * @return true if sucessful
      * @throws KeeperException
      * @throws IOException
@@ -440,12 +442,13 @@ public class ZooKeeperMain {
 
     /**
      * this method deletes quota for a node.
-     * @param zk the zookeeper client
-     * @param path the path to delete quota for
-     * @param bytes true if number of bytes needs to
-     * be unset
+     *
+     * @param zk       the zookeeper client
+     * @param path     the path to delete quota for
+     * @param bytes    true if number of bytes needs to
+     *                 be unset
      * @param numNodes true if number of nodes needs
-     * to be unset
+     *                 to be unset
      * @return true if quota deletion is successful
      * @throws KeeperException
      * @throws IOException
@@ -520,9 +523,10 @@ public class ZooKeeperMain {
 
     /**
      * this method creates a quota node for the path
-     * @param zk the ZooKeeper client
-     * @param path the path for which quota needs to be created
-     * @param bytes the limit of bytes on this path
+     *
+     * @param zk       the ZooKeeper client
+     * @param path     the path for which quota needs to be created
+     * @param bytes    the limit of bytes on this path
      * @param numNodes the limit of number of nodes on this path
      * @return true if its successful and false if not.
      */
@@ -650,7 +654,8 @@ public class ZooKeeperMain {
             System.exit(exitCode);
         } else if (cmd.equals("redo") && args.length >= 2) {
             Integer i = Integer.decode(args[1]);
-            if (commandCount <= i || i < 0) { // don't allow redoing this redo
+            if (commandCount <= i || i < 0) {
+                // don't allow redoing this redo
                 throw new MalformedCommandException("Command index out of range");
             }
             cl.parseCommand(history.get(i));
