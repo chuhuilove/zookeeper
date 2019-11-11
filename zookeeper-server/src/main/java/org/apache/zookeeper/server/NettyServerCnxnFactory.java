@@ -194,7 +194,6 @@ public class NettyServerCnxnFactory extends ServerCnxnFactory {
              */
             try {
                 if (LOG.isTraceEnabled()) {
-
                     LOG.trace("cyzi:message received called {}", msg);
                 }
                 try {

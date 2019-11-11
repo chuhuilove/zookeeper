@@ -134,7 +134,7 @@ public class Vote {
                     && peerEpoch == other.peerEpoch);
         } else {
             /*
-             * There are two things going on in the logic below:
+             * 下面的逻辑中有两件事:
              * 
              * 1. skip comparing the zxid and electionEpoch for votes for servers 
              *    out of election. 

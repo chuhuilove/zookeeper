@@ -60,6 +60,7 @@ tmp/**/*
 .ant-targets-build.xml
 zkdata/
 zkdataLog/
+data/
 # C
 tags
 .cproject

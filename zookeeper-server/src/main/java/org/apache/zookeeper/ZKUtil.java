@@ -173,9 +173,9 @@ public class ZKUtil {
 
         StackTraceElement[] stackTrace = Thread.currentThread().getStackTrace();
         for(StackTraceElement element:stackTrace){
-            if(LOG.isDebugEnabled()){
+//            if(LOG.isDebugEnabled()){
                 LOG.info("cyzi "+className+" stack:"+element.toString());
-            }
+//            }
         }
     }
 

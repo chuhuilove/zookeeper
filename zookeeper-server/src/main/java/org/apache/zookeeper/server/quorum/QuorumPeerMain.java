@@ -134,15 +134,26 @@ public class QuorumPeerMain {
         purgeMgr.start();
 
         if (args.length == 1 && config.isDistributed()) {
+            /**
+             * 集群模式,走这里
+             */
             runFromConfig(config);
         } else {
             LOG.warn("Either no config or no quorum defined in config, running "
                     + " in standalone mode");
-            // there is only server in the quorum -- run as standalone
+            /**
+             * 单机模式,走这里,
+             */
             ZooKeeperServerMain.main(args);
         }
     }
 
+    /**
+     * 集群模式下,走这个函数
+     * @param config 配置文件
+     * @throws IOException
+     * @throws AdminServerException
+     */
     public void runFromConfig(QuorumPeerConfig config)
             throws IOException, AdminServerException {
         try {
@@ -157,12 +168,14 @@ public class QuorumPeerMain {
             ServerCnxnFactory secureCnxnFactory = null;
 
             if (config.getClientPortAddress() != null) {
+                // 创建socket 工厂
                 cnxnFactory = ServerCnxnFactory.createFactory();
                 cnxnFactory.configure(config.getClientPortAddress(),
                         config.getMaxClientCnxns(),
                         false);
             }
 
+            // 安全客户端没有配置,,先跳过
             if (config.getSecureClientPortAddress() != null) {
                 secureCnxnFactory = ServerCnxnFactory.createFactory();
                 secureCnxnFactory.configure(config.getSecureClientPortAddress(),
@@ -170,14 +183,23 @@ public class QuorumPeerMain {
                         true);
             }
 
+            /**
+             * 创建一个{@link QuorumPeer}实例
+             */
             quorumPeer = getQuorumPeer();
+            /**
+             * 设置事务日志目录和快照目录,同单机模式
+             */
             quorumPeer.setTxnFactory(new FileTxnSnapLog(
                     config.getDataLogDir(),
                     config.getDataDir()));
+
             quorumPeer.enableLocalSessions(config.areLocalSessionsEnabled());
             quorumPeer.enableLocalSessionsUpgrading(
                     config.isLocalSessionsUpgradingEnabled());
-            //quorumPeer.setQuorumPeers(config.getAllMembers());
+            /**
+             * 设置选举算法
+             */
             quorumPeer.setElectionType(config.getElectionAlg());
             quorumPeer.setMyid(config.getServerId());
             quorumPeer.setTickTime(config.getTickTime());
@@ -186,6 +208,9 @@ public class QuorumPeerMain {
             quorumPeer.setInitLimit(config.getInitLimit());
             quorumPeer.setSyncLimit(config.getSyncLimit());
             quorumPeer.setConfigFileName(config.getConfigFilename());
+            /**
+             * 直接创建一个zdb
+             */
             quorumPeer.setZKDatabase(new ZKDatabase(quorumPeer.getTxnFactory()));
             quorumPeer.setQuorumVerifier(config.getQuorumVerifier(), false);
             if (config.getLastSeenQuorumVerifier() != null) {
@@ -215,15 +240,18 @@ public class QuorumPeerMain {
             quorumPeer.setQuorumCnxnThreadsSize(config.quorumCnxnThreadsSize);
             quorumPeer.initialize();
 
+            // 直接跳到QuorumPeer的run方法...
             quorumPeer.start();
+            LOG.warn(Thread.currentThread().getName()+" wait join start");
             quorumPeer.join();
+            LOG.warn(Thread.currentThread().getName()+" wait join end");
+
         } catch (InterruptedException e) {
             // warn, but generally this is ok
             LOG.warn("Quorum Peer interrupted", e);
         }
     }
 
-    // @VisibleForTesting
     protected QuorumPeer getQuorumPeer() throws SaslException {
         return new QuorumPeer();
     }

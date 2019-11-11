@@ -106,6 +106,12 @@ public class ZooKeeperMain {
         commandMap.put("printwatches", "on|off");
         commandMap.put("quit", "");
 
+        /**
+         * 这里这个设计很好,将命令字符串和具体的实例直接封装在一个map中
+         * 在解析命令的时候,直接通过命令字符串,将具体的处理实例获取到
+         * 然后直接通过实例去处理具体的命令.
+         * @see #processZKCmd(MyCommandOptions)  最后一段代码
+         */
         new CloseCommand().addToMap(commandMapCli);
         new CreateCommand().addToMap(commandMapCli);
         new DeleteCommand().addToMap(commandMapCli);
@@ -128,10 +134,21 @@ public class ZooKeeperMain {
         new GetConfigCommand().addToMap(commandMapCli);
         new RemoveWatchesCommand().addToMap(commandMapCli);
 
+        StringBuilder builder = new StringBuilder();
+
         // add all to commandMap
         for (Entry<String, CliCommand> entry : commandMapCli.entrySet()) {
             commandMap.put(entry.getKey(), entry.getValue().getOptionStr());
+            builder.append(entry.getKey());
+            builder.append(",");
         }
+
+        builder.deleteCharAt(builder.length() - 1);
+
+        LOG.warn("register command is :" + builder.toString());
+//   register command is : stat,set,ls,deleteall,delquota,ls2,setAcl,setquota,delete,sync,reconfig,listquota,rmr,get,create,addauth,getAcl,close,config,removewatches
+
+
         /**
          * 设置客户端通信框架为Netty
          * System.setProperty(ZOOKEEPER_CLIENT_CNXN_SOCKET,ClientCnxnSocketNetty.class.getName());
@@ -632,6 +649,15 @@ public class ZooKeeperMain {
         return watch;
     }
 
+    /**
+     * 处理命令行客户端中的输入
+     *
+     * @param co
+     * @return
+     * @throws CliException
+     * @throws IOException
+     * @throws InterruptedException
+     */
     protected boolean processZKCmd(MyCommandOptions co) throws CliException, IOException, InterruptedException {
         String[] args = co.getArgArray();
         String cmd = co.getCommand();
@@ -649,6 +675,7 @@ public class ZooKeeperMain {
         LOG.debug("Processing " + cmd);
 
 
+        // quit命令
         if (cmd.equals("quit")) {
             zk.close();
             System.exit(exitCode);
@@ -690,6 +717,7 @@ public class ZooKeeperMain {
         }
 
         // execute from commandMap
+
         CliCommand cliCmd = commandMapCli.get(cmd);
         if (cliCmd != null) {
             cliCmd.setZk(zk);

@@ -23,6 +23,13 @@ import org.apache.zookeeper.ZooKeeper;
 
 /**
  * base class for all CLI commands
+ *
+ * 设计了一个抽象类,其继承者,代表了每一个具体的命令.
+ *
+ * 每个命令的处理过程,都封装在具体的实现中.
+ *
+ * 可以说是一个工厂模式吧...
+ *
  */
 abstract public class CliCommand {
     protected ZooKeeper zk;

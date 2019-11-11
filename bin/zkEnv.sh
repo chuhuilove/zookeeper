@@ -55,6 +55,7 @@ fi
 
 if [ "x$ZOOCFG" = "x" ]
 then
+     echo -e " cyzi in zkEnv.sh ,no set zoocfg"
     ZOOCFG="zoo.cfg"
 fi
 
@@ -69,9 +70,10 @@ if [ "x${ZOO_LOG_DIR}" = "x" ]
 then
     ZOO_LOG_DIR="$ZOOKEEPER_PREFIX/logs"
 fi
-
+echo "cyzi in zkEnv.sh  x${ZOO_LOG4J_PROP}"
 if [ "x${ZOO_LOG4J_PROP}" = "x" ]
 then
+    echo -e "cyzi in zkEnv.sh no set zoo_log4j_prop,need customzed"
     ZOO_LOG4J_PROP="INFO,CONSOLE"
 fi
 

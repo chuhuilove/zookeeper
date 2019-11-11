@@ -36,6 +36,7 @@ public class PathUtils {
 	}
 	
     /**
+     * 对路径进行验证
      * Validate the provided znode path string
      * @param path znode path string
      * @throws IllegalArgumentException if the path is invalid
@@ -47,6 +48,7 @@ public class PathUtils {
         if (path.length() == 0) {
             throw new IllegalArgumentException("Path length must be > 0");
         }
+        // 第一个字符必须是/
         if (path.charAt(0) != '/') {
             throw new IllegalArgumentException(
                          "Path must start with / character");
@@ -54,6 +56,7 @@ public class PathUtils {
         if (path.length() == 1) { // done checking - it's the root
             return;
         }
+        // 路径中字符,最后一个不能是/
         if (path.charAt(path.length() - 1) == '/') {
             throw new IllegalArgumentException(
                          "Path must not end with / character");

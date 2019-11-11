@@ -28,6 +28,9 @@ import org.apache.zookeeper.server.EphemeralType;
 
 /**
  * create command for cli
+ *
+ * 创建命令
+ *
  */
 public class CreateCommand extends CliCommand {
 
@@ -49,6 +52,13 @@ public class CreateCommand extends CliCommand {
 
     @Override
     public CliCommand parse(String[] cmdArgs) throws CliParseException {
+
+        /**
+         * 解析create 命令的参数
+         *
+         *
+         */
+
         Parser parser = new PosixParser();
         try {
             cl = parser.parse(options, cmdArgs);
@@ -121,7 +131,11 @@ public class CreateCommand extends CliCommand {
             acl = AclParser.parse(args[3]);
         }
         try {
-            // 前面执行一对校验,开始正式的执行创建逻辑
+            /**
+             * 前面执行一堆参数校验,如参数的个数
+             * 命令格式等...
+             * 这一行,执行创建命令
+             */
             String newPath = hasT ? zk.create(path, data, acl, flags, new Stat(), ttl) : zk.create(path, data, acl, flags);
             err.println("Created " + newPath);
         } catch(IllegalArgumentException ex) {

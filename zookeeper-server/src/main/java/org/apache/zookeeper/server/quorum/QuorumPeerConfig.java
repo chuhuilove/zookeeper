@@ -55,6 +55,7 @@ import org.apache.zookeeper.server.quorum.flexible.QuorumMaj;
 import org.apache.zookeeper.server.quorum.flexible.QuorumVerifier;
 import org.apache.zookeeper.server.util.VerifyingFileFactory;
 
+import static org.apache.zookeeper.ZKUtil.logStackInfo;
 import static org.apache.zookeeper.util.Constants.CLIENT_PORT;
 import static org.apache.zookeeper.util.Constants.DATA_DIR;
 import static org.apache.zookeeper.util.Constants.DATA_LOG_DIR;
@@ -88,15 +89,18 @@ public class QuorumPeerConfig {
     protected String configFileStr = null;
     protected int tickTime = ZooKeeperServer.DEFAULT_TICK_TIME;
     protected int maxClientCnxns = 60;
-    /** defaults to -1 if not set explicitly
-     *  客户端和服务端之间会通信,通信嘛,就可能会出现超时之类的.
-     *  有最小超时时间,就是{@link #minSessionTimeout}
-     *  还有最大超时时间,就是就是{@link #maxSessionTimeout}
-     *
-     *  这两个值,如果没有显式的设置,则值都是-1.
-     * */
+    /**
+     * defaults to -1 if not set explicitly
+     * 客户端和服务端之间会通信,通信嘛,就可能会出现超时之类的.
+     * 有最小超时时间,就是{@link #minSessionTimeout}
+     * 还有最大超时时间,就是就是{@link #maxSessionTimeout}
+     * <p>
+     * 这两个值,如果没有显式的设置,则值都是-1.
+     */
     protected int minSessionTimeout = -1;
-    /** defaults to -1 if not set explicitly */
+    /**
+     * defaults to -1 if not set explicitly
+     */
     protected int maxSessionTimeout = -1;
 
     protected boolean localSessionsEnabled = false;
@@ -104,6 +108,9 @@ public class QuorumPeerConfig {
 
     protected int initLimit;
     protected int syncLimit;
+    /**
+     * 选举算法,默认为3
+     */
     protected int electionAlg = 3;
     protected int electionPort = 2182;
     protected boolean quorumListenOnAllIPs = false;
@@ -130,6 +137,7 @@ public class QuorumPeerConfig {
 
     /**
      * Minimum snapshot retain count.
+     *
      * @see org.apache.zookeeper.server.PurgeTxnLog#purge(File, File, int)
      */
     private final int MIN_SNAP_RETAIN_COUNT = 3;
@@ -147,6 +155,7 @@ public class QuorumPeerConfig {
 
     /**
      * Parse a ZooKeeper configuration file
+     *
      * @param path the patch of the configuration file
      * @throws ConfigException error processing configuration
      */
@@ -252,6 +261,7 @@ public class QuorumPeerConfig {
     /**
      * 从配置文件中将数据解析出来
      * Parse config from a Properties.
+     *
      * @param zkProp Properties to parse from.
      * @throws IOException
      * @throws ConfigException
@@ -306,6 +316,9 @@ public class QuorumPeerConfig {
             } else if (key.equals("quorumListenOnAllIPs")) {
                 quorumListenOnAllIPs = Boolean.parseBoolean(value);
             } else if (key.equals("peerType")) {
+                // 可以配置机器的角色
+                // 除却leader follower之外,还可以指定
+                // observer和participant
                 if (value.toLowerCase().equals("observer")) {
                     peerType = LearnerType.OBSERVER;
                 } else if (value.toLowerCase().equals("participant")) {
@@ -470,9 +483,10 @@ public class QuorumPeerConfig {
 
         // backward compatibility - dynamic configuration in the same file as
         // static configuration params see writeDynamicConfig()
-        // 动态文件配置...没整过,先放过去
+        // 3.5以后,动态文件配置,和集群配置解析,都放到这里来了
         if (dynamicConfigFileStr == null) {
             setupQuorumPeerConfig(zkProp, true);
+
             if (isDistributed() && isReconfigEnabled()) {
                 // we don't backup static config for standalone mode.
                 // we also don't backup if reconfig feature is disabled.
@@ -484,9 +498,8 @@ public class QuorumPeerConfig {
     /**
      * Configure SSL authentication only if it is not configured.
      *
-     * @throws ConfigException
-     *             If authentication scheme is configured but authentication
-     *             provider is not configured.
+     * @throws ConfigException If authentication scheme is configured but authentication
+     *                         provider is not configured.
      */
     private void configureSSLAuth() throws ConfigException {
         try (ClientX509Util clientX509Util = new ClientX509Util()) {
@@ -546,8 +559,9 @@ public class QuorumPeerConfig {
                 List<String> servers = new ArrayList<String>();
                 for (Entry<Object, Object> entry : cfg.entrySet()) {
                     String key = entry.getKey().toString().trim();
-                    if (!needKeepVersion && key.startsWith("version"))
+                    if (!needKeepVersion && key.startsWith("version")) {
                         continue;
+                    }
 
                     String value = entry.getValue().toString().trim();
                     servers.add(key
@@ -663,6 +677,10 @@ public class QuorumPeerConfig {
     /**
      * Parse dynamic configuration file and return
      * quorumVerifier for new configuration.
+     *
+     * 解析动态配置文件并且返回一个新的QuorumVerifier
+     *
+     *
      * @param dynamicConfigProp Properties to parse from.
      * @throws IOException
      * @throws ConfigException
@@ -672,6 +690,7 @@ public class QuorumPeerConfig {
         boolean isHierarchical = false;
         for (Entry<Object, Object> entry : dynamicConfigProp.entrySet()) {
             String key = entry.getKey().toString().trim();
+
             if (key.startsWith("group") || key.startsWith("weight")) {
                 isHierarchical = true;
             } else if (!configBackwardCompatibilityMode && !key.startsWith("server.") && !key.equals("version")) {
@@ -716,9 +735,10 @@ public class QuorumPeerConfig {
              */
             if (eAlg != 0) {
                 for (QuorumServer s : qv.getVotingMembers().values()) {
-                    if (s.electionAddr == null)
+                    if (s.electionAddr == null) {
                         throw new IllegalArgumentException(
                                 "Missing election port for server: " + s.id);
+                    }
                 }
             }
         }
@@ -727,14 +747,20 @@ public class QuorumPeerConfig {
 
     private void setupMyId() throws IOException {
         File myIdFile = new File(dataDir, "myid");
-        // 单机模式下不需要myid文件
+        /**
+         * 单机模式下不需要myid文件,因为会自动创建dataDir的目录,所以不需要预先创建dataDir目录
+         * 集群模式下,需要myid文件,且myid文件必须存在dataDir目录内,所以需要先创建dataDir目录
+         */
+
+        logStackInfo(getClass().getName());
+
         if (!myIdFile.isFile()) {
             return;
         }
         BufferedReader br = new BufferedReader(new FileReader(myIdFile));
         String myIdString;
         try {
-            myIdString = br.readLine();
+            myIdString = br.readLine().trim();
         } finally {
             br.close();
         }
@@ -764,6 +790,9 @@ public class QuorumPeerConfig {
         if (qs != null && qs.clientAddr != null) clientPortAddress = qs.clientAddr;
     }
 
+    /**
+     * 设置角色类型
+     */
     private void setupPeerType() {
         // Warn about inconsistent peer type
         LearnerType roleByServersList = quorumVerifier.getObservingMembers().containsKey(serverId) ? LearnerType.OBSERVER

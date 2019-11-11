@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -261,6 +261,7 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
         // NO-OP. Adding a packet will already wake up a netty connection
         // so we don't need to add a dummy packet to the queue to trigger
         // a wake-up.
+        // 添加一个包将会唤醒一个网络连接,所以我们不需要向队列添加一个虚拟包来触发唤醒.
     }
 
     @Override
@@ -277,6 +278,18 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
         outgoingQueue.add(WakeupPacket.getInstance());
     }
 
+    /**
+     *  Do transportation work:
+     * - read packets into incomingBuffer. 将数据包读入incomingBuffer
+     * - write outgoing queue packets.    写入传出队列数据包
+     * - update relevant timestamp.       更新相关的时间戳
+     * @param waitTimeOut timeout in blocking wait. Unit in MilliSecond.
+     * @param pendingQueue These are the packets that have been sent and
+     *                     are waiting for a response.
+     * @param cnxn
+     * @throws IOException
+     * @throws InterruptedException
+     */
     @Override
     void doTransport(int waitTimeOut,
                      List<Packet> pendingQueue,
@@ -295,12 +308,18 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
                 head = outgoingQueue.poll(waitTimeOut, TimeUnit.MILLISECONDS);
             }
             // check if being waken up on closing.
+            /**
+             * 如果{@link sendThread}的线程状态已经不是处于活跃状态了,则将请求包再次放入{@link outgoingQueue}
+             */
             if (!sendThread.getZkState().isAlive()) {
                 // adding back the packet to notify of failure in conLossPacket().
                 addBack(head);
                 return;
             }
             // channel disconnection happened
+            /**
+             * channel 已经关闭
+             */
             if (disconnected.get()) {
                 addBack(head);
                 throw new EndOfStreamException("channel for sessionid 0x"
@@ -349,10 +368,19 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
     };
 
     private ChannelFuture sendPkt(Packet p, boolean doFlush) {
-        // Assuming the packet will be sent out successfully. Because if it fails,
+        // 假设包将被成功发送出去.因为如果失败,通道将关闭并清理队列 Because if it fails,
         // the channel will close and clean up queues.
         p.createBB();
         updateLastSend();
+
+        // sendPkt的调用链
+//       org.apache.zookeeper.ClientCnxnSocketNetty.sendPkt(ClientCnxnSocketNetty.java:376)
+//       org.apache.zookeeper.ClientCnxnSocketNetty.sendPktOnly(ClientCnxnSocketNetty.java:360)
+//       org.apache.zookeeper.ClientCnxnSocketNetty.doWrite(ClientCnxnSocketNetty.java:421)
+//       org.apache.zookeeper.ClientCnxnSocketNetty.doTransport(ClientCnxnSocketNetty.java:330)
+//       org.apache.zookeeper.ClientCnxn$SendThread.run(ClientCnxn.java:1298)
+
+
         final ByteBuf writeBuffer = Unpooled.wrappedBuffer(p.bb);
         final ChannelFuture result = doFlush
                 ? channel.writeAndFlush(writeBuffer)
@@ -378,6 +406,19 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
                         (p.requestHeader.getType() != ZooDefs.OpCode.ping) &&
                         (p.requestHeader.getType() != ZooDefs.OpCode.auth)) {
                     p.requestHeader.setXid(cnxn.getXid());
+                    /**
+                     * doWrite的调用链是
+                     * ClientCnxn
+                     * sendThread.run()
+                     * -> clientCnxnSocket.doTransport(ClientCnxnSocketNetty)
+                     * ->doWrite
+                     *
+                     * pendingQueue参数一路传递过来,实际上是ClientCnxn的成员变量
+                     * 而pendingQueue的实现{@link java.util.LinkedList}不是线程安全的.
+                     * 又因为这里要对pendingQueue进行写操作,
+                     * 所以需要对其加锁.
+                     *
+                     */
                     synchronized (pendingQueue) {
                         pendingQueue.add(p);
                     }
@@ -445,7 +486,6 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
      *
      * ZKClientPipelineFactory 这个类,就相当于自己写Netty示例的时候,使用的xxxInitializer.
      * 在里面添加各种pipeline
-     *
      *
      */
     private class ZKClientPipelineFactory extends ChannelInitializer<SocketChannel> {
@@ -537,6 +577,10 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
                         initialized = true;
                         updateLastHeard();
                     } else {
+                        /**
+                         * 读取到来自服务端的数据后,
+                         * 调用readResponse进行解析
+                         */
                         sendThread.readResponse(incomingBuffer);
                         lenBuffer.clear();
                         incomingBuffer = lenBuffer;

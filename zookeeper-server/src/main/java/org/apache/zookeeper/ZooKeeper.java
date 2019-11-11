@@ -174,6 +174,10 @@ public class ZooKeeper implements AutoCloseable {
         //Keep these two lines together to keep the initialization order explicit
         LOG = LoggerFactory.getLogger(ZooKeeper.class);
         Environment.logEnv("Client environment:", LOG);
+        /**
+         * 设置客户端通信框架为Netty
+         */
+        System.setProperty(ZKClientConfig.ZOOKEEPER_CLIENT_CNXN_SOCKET,ClientCnxnSocketNetty.class.getName());
     }
 
     protected final HostProvider hostProvider;
@@ -1524,6 +1528,7 @@ public class ZooKeeper implements AutoCloseable {
     }
 
     /**
+     *
      * Create a node with the given path. The node data will be the given data,
      * and node acl will be the given acl.
      * <p>
@@ -1582,21 +1587,34 @@ public class ZooKeeper implements AutoCloseable {
                          CreateMode createMode)
             throws KeeperException, InterruptedException {
         final String clientPath = path;
+
+        // 节点路径验证 create /eee/sassa
         PathUtils.validatePath(clientPath, createMode.isSequential());
+        // TTL节点验证 不知道,先跳过
         EphemeralType.validateTTL(createMode, -1);
 
+        // 连接字符串可以是localhost:2181/root/
+        /**
+         * 连接字符串可以是localhost:2181/root/ 格式,如果是这种格式下的,那么当我们创建一个节点 /test
+         * 那么会自动拼接成/root/test
+         *
+         */
         final String serverPath = prependChroot(clientPath);
 
         RequestHeader h = new RequestHeader();
         h.setType(createMode.isContainer() ? ZooDefs.OpCode.createContainer : ZooDefs.OpCode.create);
+
+        //
         CreateRequest request = new CreateRequest();
         CreateResponse response = new CreateResponse();
         request.setData(data);
         request.setFlags(createMode.toFlag());
         request.setPath(serverPath);
+
         if (acl != null && acl.size() == 0) {
             throw new KeeperException.InvalidACLException();
         }
+        // 填充一下acl数据
         request.setAcl(acl);
 
         // 提交请求
