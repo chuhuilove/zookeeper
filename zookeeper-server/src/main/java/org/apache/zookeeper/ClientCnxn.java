@@ -70,6 +70,7 @@ import org.apache.zookeeper.client.ZKClientConfig;
 import org.apache.zookeeper.client.HostProvider;
 import org.apache.zookeeper.client.ZooKeeperSaslClient;
 import org.apache.zookeeper.common.Time;
+import org.apache.zookeeper.data.Stat;
 import org.apache.zookeeper.proto.AuthPacket;
 import org.apache.zookeeper.proto.ConnectRequest;
 import org.apache.zookeeper.proto.Create2Response;
@@ -310,6 +311,9 @@ public class ClientCnxn {
             this.watchRegistration = watchRegistration;
         }
 
+        /**
+         *  将发送到服务端包序列化成一个{@link ByteBuffer}
+         */
         public void createBB() {
             try {
                 ByteArrayOutputStream baos = new ByteArrayOutputStream();
@@ -353,6 +357,8 @@ public class ClientCnxn {
     }
 
     /**
+     * 创建一个连接对象.直到需要时才建立实际的网络连接.在构造之后必须调用start()实例方法.
+     * <p>
      * Creates a connection object. The actual network connect doesn't get
      * established until needed. The start() instance method must be called
      * subsequent to construction.
@@ -407,6 +413,8 @@ public class ClientCnxn {
         /**
          * 连接超时间的计算方法:
          * 默认的session超时时间,除以有几台机器
+         * 读超时时间:session超时时间*2/3...为什么要这样计算呢?
+         *
          */
 
         connectTimeout = sessionTimeout / hostProvider.size();
@@ -427,6 +435,9 @@ public class ClientCnxn {
         initRequestTimeout();
     }
 
+    /**
+     * 启动线程..
+     */
     public void start() {
         sendThread.start();
         eventThread.start();
@@ -508,8 +519,11 @@ public class ClientCnxn {
         public void queuePacket(Packet packet) {
             if (wasKilled) {
                 synchronized (waitingEvents) {
-                    if (isRunning) waitingEvents.add(packet);
-                    else processEvent(packet);
+                    if (isRunning) {
+                        waitingEvents.add(packet);
+                    } else {
+                        processEvent(packet);
+                    }
                 }
             } else {
                 waitingEvents.add(packet);
@@ -534,13 +548,15 @@ public class ClientCnxn {
                     } else {
                         processEvent(event);
                     }
-                    if (wasKilled)
+                    if (wasKilled) {
                         synchronized (waitingEvents) {
                             if (waitingEvents.isEmpty()) {
                                 isRunning = false;
                                 break;
                             }
                         }
+                    }
+
                 }
             } catch (InterruptedException e) {
                 LOG.error("Event thread exiting due to interruption", e);
@@ -1003,7 +1019,7 @@ public class ClientCnxn {
         void primeConnection() throws IOException {
             LOG.info("Socket connection established, initiating session, client: {}, server: {}",
                     clientCnxnSocket.getLocalSocketAddress(),
-                    clientCnxnSocket.getRemoteSocketAddress());
+                    clientCnxnSocket.getRemoteSocketAddress()); // 连接建立后的事件
             isFirstConnect = false;
             long sessId = (seenRwServerBefore) ? sessionId : 0;
             ConnectRequest conReq = new ConnectRequest(0, lastZxid,
@@ -1092,6 +1108,7 @@ public class ClientCnxn {
         }
 
         private void sendPing() {
+            LOG.info("cyzi>>>>>>>client send heart to server");
             lastPingSentNs = System.nanoTime();
             RequestHeader h = new RequestHeader(-2, OpCode.ping);
             queuePacket(h, null, null, null, null, null, null, null, null);
@@ -1107,6 +1124,7 @@ public class ClientCnxn {
 
         // Set to true if and only if constructor of ZooKeeperSaslClient
         // throws a LoginException: see startConnect() below.
+//        当且仅当ZooKeeperSaslClient的构造函数抛出LoginException时,才设置为true:请参见下面的startConnect().
         private boolean saslLoginFailed = false;
 
         /**
@@ -1116,9 +1134,13 @@ public class ClientCnxn {
          * @throws IOException
          */
         private void startConnect(InetSocketAddress addr) throws IOException {
+            LOG.info("init a connect");
             // 初始化一个连接
             //
             saslLoginFailed = false;
+            /**
+             * 1. 如果不是第一次连接,则随机睡觉,??为什么呢?
+             */
             // 如果不是第一次连接
             if (!isFirstConnect) {
                 try {
@@ -1131,7 +1153,11 @@ public class ClientCnxn {
             state = States.CONNECTING;
             String hostPort = addr.getHostString() + ":" + addr.getPort();
             MDC.put("myid", hostPort);
-            setName(getName().replaceAll("\\(.*\\)", "(" + hostPort + ")"));
+            // 设置线程名
+            String threadName = getName().replaceAll("\\(.*\\)", "(" + hostPort + ")");
+            LOG.info("sendThread thread Name is:{}",threadName);
+            setName(threadName);
+            // 判断是否启动了安全链接,如果启动了安全链接,则....
             if (clientConfig.isSaslClientEnabled()) {
                 try {
                     if (zooKeeperSaslClient != null) {
@@ -1155,10 +1181,13 @@ public class ClientCnxn {
             logStartConnect(addr);
 
             // 前面做了一堆准备工作,现在开始连接
+            // 这里直接跳进Nett中
             clientCnxnSocket.connect(addr);
         }
 
         private void logStartConnect(InetSocketAddress addr) {
+
+
             String msg = "Opening socket connection to server " + addr;
             if (zooKeeperSaslClient != null) {
                 msg += ". " + zooKeeperSaslClient.getConfigStatus();
@@ -1175,21 +1204,35 @@ public class ClientCnxn {
             //session id默认为0
             clientCnxnSocket.introduce(this, sessionId, outgoingQueue);
             clientCnxnSocket.updateNow();
-            clientCnxnSocket.updateLastSendAndHeard();
+
+            clientCnxnSocket.updateLastSendAndHeard();//连接创建成功后,now 设置成了36542002 36551574
             int to;
+
             long lastPingRwServer = Time.currentElapsedTime();
             //10 心跳发送间隔
-            final int MAX_SEND_PING_INTERVAL = 10000;
+            final int MAX_SEND_PING_INTERVAL = 5000;
             InetSocketAddress serverAddress = null;
 
             // 在当前客户端处于活跃状态的情况下,这里是一个死循环
+            /**
+             * 如果当前客户端处于活跃状态,则进行死循环
+             * {@link #state}的默认值是{@link States.NOT_CONNECTED},所以能进入这个死循环.
+             */
             while (state.isAlive()) {
                 try {
 
-                    // 如果是第一次创建连接
+                    /**
+                     * 1. 判断客户端是否已经连接到服务端,如果没有连接到服务端,
+                     * 则进行连接.
+                     */
                     if (!clientCnxnSocket.isConnected()) {
-                        // 如果没有连接到服务端,
-                        // 判断一下是不是正在关闭,如果不是正在关闭,则认为是需要初始化连接
+                        LOG.error("cyzi 开始链接");
+                        /**
+                         * 1.1 如果没有连接到服务端,
+                         * 判断一下,当前客户端是不是处于正在关闭状态.
+                         */
+                        //
+                        //
                         // don't re-establish connection if we are closing
                         if (closing) {
                             break;
@@ -1206,12 +1249,20 @@ public class ClientCnxn {
                              */
                             serverAddress = hostProvider.next(1000);
                         }
-                        // 和服务端进行socket连接
+                        /**
+                         * 1.2 从{@link hostProvider}中获取一个ip地址,进行连接
+                         */
                         startConnect(serverAddress);
+                        /**
+                         * 1.3 重新设置客户端的lastSend和lastHeard
+                         */
                         clientCnxnSocket.updateLastSendAndHeard();
                     }
 
-                    // 处于已经连接中的状态
+                    /**
+                     * 2. 如果当前客户端和服务端处于连接状态
+                     * 判断是否超时..
+                     */
                     if (state.isConnected()) {
                         // determine whether we need to send an AuthFailed event.
                         // 确定是否需要发送AuthFailed事件
@@ -1248,9 +1299,13 @@ public class ClientCnxn {
                                 }
                             }
                         }
+
+
                         to = readTimeout - clientCnxnSocket.getIdleRecv();
+                        LOG.info("state.isConnected() yes ,the readTimeout is:{},to is:{}", readTimeout,to);
                     } else {
                         to = connectTimeout - clientCnxnSocket.getIdleRecv();
+                        LOG.info("state.isConnected() no ,the connectTimeout is:{},to is:{}", connectTimeout,to);//30000 29964
                     }
 
                     if (to <= 0) {
@@ -1260,7 +1315,7 @@ public class ClientCnxn {
                                 + "ms"
                                 + " for sessionid 0x"
                                 + Long.toHexString(sessionId);
-                        LOG.warn(warnInfo);
+                        LOG.warn("客户端触发超时异常:"+warnInfo);
                         throw new SessionTimeoutException(warnInfo);
                     }
 
@@ -1271,6 +1326,7 @@ public class ClientCnxn {
                         //also make sure not to send too many pings when readTimeout is small
                         int timeToNextPing = readTimeout / 2 - clientCnxnSocket.getIdleSend() -
                                 ((clientCnxnSocket.getIdleSend() > 1000) ? 1000 : 0);
+                        LOG.info("timeToNextPing is:{}", timeToNextPing);
                         //send a ping request either time is due or no packet sent out within MAX_SEND_PING_INTERVAL
                         if (timeToNextPing <= 0 || clientCnxnSocket.getIdleSend() > MAX_SEND_PING_INTERVAL) {
                             sendPing();
@@ -1282,8 +1338,10 @@ public class ClientCnxn {
                         }
                     }
 
-                    // If we are in read-only mode, seek for read/write server
+                    // 如果客户端处于只读模式If we are in read-only mode, seek for read/write server
                     if (state == States.CONNECTEDREADONLY) {
+                        LOG.info("客户端处于States.CONNECTEDREADONLY模式");
+
                         long now = Time.currentElapsedTime();
                         int idlePingRwServer = (int) (now - lastPingRwServer);
                         if (idlePingRwServer >= pingRwTimeout) {
@@ -1296,6 +1354,7 @@ public class ClientCnxn {
                         to = Math.min(to, pingRwTimeout - idlePingRwServer);
                     }
 
+                    LOG.info("在 sendThread线程中调用doTransport函数,to is:{},pendingQueue.size is:{}",to,pendingQueue.size());
                     clientCnxnSocket.doTransport(to, pendingQueue, ClientCnxn.this);
                 } catch (Throwable e) {
                     if (closing) {
@@ -1418,6 +1477,10 @@ public class ClientCnxn {
                 }
                 pendingQueue.clear();
             }
+            /**
+             * 这里不能调用{@link outgoingQueue}的{@code claear()}方法,
+             * 因为在迭代和清除之间可能会在{@code queuePacket()}中添加新的数据包.
+             */
             // We can't call outgoingQueue.clear() here because
             // between iterating and clear up there might be new
             // packets added in queuePacket().
@@ -1583,7 +1646,15 @@ public class ClientCnxn {
     }
 
     /**
-     * 提交请求的空壳函数
+     * 提交请求
+     * 从 {@link ZooKeeper#create(String, byte[], List, CreateMode, Stat, long)}过来,{@code WatchRegistration}参数设置为null
+     *
+     * @param h                 请求头
+     * @param request           请求体
+     * @param response          响应体
+     * @param watchRegistration 路径观察者,从
+     * @return
+     * @throws InterruptedException
      */
     public ReplyHeader submitRequest(RequestHeader h, Record request,
                                      Record response, WatchRegistration watchRegistration)
@@ -1592,13 +1663,14 @@ public class ClientCnxn {
         return submitRequest(h, request, response, watchRegistration, null);
     }
 
-    public ReplyHeader submitRequest(RequestHeader h, Record request,
+    public ReplyHeader submitRequest(RequestHeader requestHeader, Record request,
                                      Record response, WatchRegistration watchRegistration,
                                      WatchDeregistration watchDeregistration)
             throws InterruptedException {
 
-        ReplyHeader r = new ReplyHeader();
-        Packet packet = queuePacket(h, r, request, response, null, null, null,
+        ReplyHeader replyHeader = new ReplyHeader();
+        // 封装请求包
+        Packet packet = queuePacket(requestHeader, replyHeader, request, response, null, null, null,
                 null, watchRegistration, watchDeregistration);
 
 
@@ -1608,7 +1680,7 @@ public class ClientCnxn {
         synchronized (packet) {
             if (requestTimeout > 0) {
                 // Wait for request completion with timeout
-                waitForPacketFinish(r, packet);
+                waitForPacketFinish(replyHeader, packet);
             } else {
                 // Wait for request completion infinitely
                 // 请求包发送出去以后,阻塞等待从服务端的数据
@@ -1617,10 +1689,10 @@ public class ClientCnxn {
                 }
             }
         }
-        if (r.getErr() == Code.REQUESTTIMEOUT.intValue()) {
+        if (replyHeader.getErr() == Code.REQUESTTIMEOUT.intValue()) {
             sendThread.cleanAndNotifyState();
         }
-        return r;
+        return replyHeader;
     }
 
     /**
@@ -1672,22 +1744,45 @@ public class ClientCnxn {
     /**
      * 将请求封装成一个{@link Packet} 对象,提交到请求队列中
      */
-    public Packet queuePacket(RequestHeader h, ReplyHeader r, Record request,
+    /**
+     * 从{@link ClientCnxn#submitRequest(RequestHeader, Record, Record, WatchRegistration, WatchDeregistration)}调用过来,
+     * 只有{@code requestHeader},{@code replyHeader},{@code request},{@code response}之外,全都是{@code null}.
+     *
+     * @param requestHeader
+     * @param replyHeader
+     * @param request
+     * @param response
+     * @param cb
+     * @param clientPath
+     * @param serverPath
+     * @param ctx
+     * @param watchRegistration
+     * @param watchDeregistration
+     * @return
+     */
+    public Packet queuePacket(RequestHeader requestHeader, ReplyHeader replyHeader, Record request,
                               Record response, AsyncCallback cb, String clientPath,
                               String serverPath, Object ctx, WatchRegistration watchRegistration,
                               WatchDeregistration watchDeregistration) {
 
         Packet packet = null;
 
+        // 请注意，我们尚未为数据包生成Xid.
+        // 它是在稍后通过ClientCnxnSocket::doIO()的实现在发送时生成的,实际是在其中发送数据包的.
+        //
         // Note that we do not generate the Xid for the packet yet. It is
         // generated later at send-time, by an implementation of ClientCnxnSocket::doIO(),
         // where the packet is actually sent.
-        packet = new Packet(h, r, request, response, watchRegistration);
+        packet = new Packet(requestHeader, replyHeader, request, response, watchRegistration);
         packet.cb = cb;
         packet.ctx = ctx;
         packet.clientPath = clientPath;
         packet.serverPath = serverPath;
         packet.watchDeregistration = watchDeregistration;
+
+        /**
+         * 将{@link #state}锁上
+         */
         // 这里的同步块有两个用途:
         // 1. synchronize with the final cleanup() in SendThread.run() to avoid race
         // 2. synchronized against each packet. So if a closeSession packet is added,
@@ -1696,15 +1791,17 @@ public class ClientCnxn {
             if (!state.isAlive() || closing) {
                 conLossPacket(packet);
             } else {
+                // 如果客户要求关闭会话,则标记为关闭
                 // If the client is asking to close the session then
                 // mark as closing
-                if (h.getType() == OpCode.closeSession) {
+                if (requestHeader.getType() == OpCode.closeSession) {
                     closing = true;
                 }
                 // 将请求packet添加到同步队列中
                 outgoingQueue.add(packet);
             }
         }
+
         sendThread.getClientCnxnSocket().packetAdded();
         return packet;
     }

@@ -6,9 +6,9 @@
  * to you under the Apache License, Version 2.0 (the
  * "License"); you may not use this file except in compliance
  * with the License.  You may obtain a copy of the License at
- *
- *     http://www.apache.org/licenses/LICENSE-2.0
- *
+ * <p>
+ * http://www.apache.org/licenses/LICENSE-2.0
+ * <p>
  * Unless required by applicable law or agreed to in writing, software
  * distributed under the License is distributed on an "AS IS" BASIS,
  * WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
@@ -19,6 +19,7 @@
 package org.apache.zookeeper;
 
 import edu.umd.cs.findbugs.annotations.SuppressFBWarnings;
+
 import java.util.ArrayList;
 import java.util.Collections;
 
@@ -28,64 +29,64 @@ import org.apache.zookeeper.data.Id;
 
 @InterfaceAudience.Public
 public class ZooDefs {
-   
-   final public static String CONFIG_NODE = "/zookeeper/config";
 
-   @InterfaceAudience.Public
+    final public static String CONFIG_NODE = "/zookeeper/config";
+
+    @InterfaceAudience.Public
     public interface OpCode {
-        public final int notification = 0;
+        int notification = 0;
 
-        public final int create = 1;
+        int create = 1;
 
-        public final int delete = 2;
+        int delete = 2;
 
-        public final int exists = 3;
+        int exists = 3;
 
-        public final int getData = 4;
+        int getData = 4;
 
-        public final int setData = 5;
+        int setData = 5;
 
-        public final int getACL = 6;
+        int getACL = 6;
 
-        public final int setACL = 7;
+        int setACL = 7;
 
-        public final int getChildren = 8;
+        int getChildren = 8;
 
-        public final int sync = 9;
+        int sync = 9;
 
-        public final int ping = 11;
+        int ping = 11;
 
-        public final int getChildren2 = 12;
+        int getChildren2 = 12;
 
-        public final int check = 13;
+        int check = 13;
 
-        public final int multi = 14;
-        
-        public final int create2 = 15;
+        int multi = 14;
 
-        public final int reconfig = 16;
+        int create2 = 15;
 
-        public final int checkWatches = 17;
+        int reconfig = 16;
 
-        public final int removeWatches = 18;
+        int checkWatches = 17;
 
-        public final int createContainer = 19;
+        int removeWatches = 18;
 
-        public final int deleteContainer = 20;
+        int createContainer = 19;
 
-        public final int createTTL = 21;
+        int deleteContainer = 20;
 
-        public final int auth = 100;
+        int createTTL = 21;
 
-        public final int setWatches = 101;
+        int auth = 100;
 
-        public final int sasl = 102;
+        int setWatches = 101;
 
-        public final int createSession = -10;
+        int sasl = 102;
 
-        public final int closeSession = -11;
+        int createSession = -10;
 
-        public final int error = -1;
+        int closeSession = -11;
+
+        int error = -1;
     }
 
     @InterfaceAudience.Public
@@ -139,7 +140,7 @@ public class ZooDefs {
                         .singletonList(new ACL(Perms.READ, ANYONE_ID_UNSAFE)));
     }
 
-    final public static String[] opNames = { "notification", "create",
+    final public static String[] opNames = {"notification", "create",
             "delete", "exists", "getData", "setData", "getACL", "setACL",
-            "getChildren", "getChildren2", "getMaxChildren", "setMaxChildren", "ping", "reconfig", "getConfig" };
+            "getChildren", "getChildren2", "getMaxChildren", "setMaxChildren", "ping", "reconfig", "getConfig"};
 }

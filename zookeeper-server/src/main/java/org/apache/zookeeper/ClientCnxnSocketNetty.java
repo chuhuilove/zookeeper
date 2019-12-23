@@ -60,6 +60,7 @@ import org.apache.zookeeper.common.X509Util;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static org.apache.zookeeper.ZKUtil.logStackInfo;
 import static org.apache.zookeeper.common.X509Exception.SSLContextException;
 
 /**
@@ -85,11 +86,12 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
     private static final AtomicReference<ByteBufAllocator> TEST_ALLOCATOR =
             new AtomicReference<>(null);
 
+
     ClientCnxnSocketNetty(ZKClientConfig clientConfig) throws IOException {
         this.clientConfig = clientConfig;
         //客户端只有一个输出socket,因此event loop group只需要一个线程.
         eventLoopGroup = NettyUtils.newNioOrEpollEventLoopGroup(1);
-        // 初始化一下packet的长度
+        //初始化客户端发送到服务端的包的最大长度,默认为4MB
         initProperties();
     }
 
@@ -160,15 +162,22 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
         try {
             // 这一行code,是连接到服务端,没错了....
             connectFuture = bootstrap.connect(addr);
+            //添加监听器
             connectFuture.addListener(new ChannelFutureListener() {
                 @Override
                 public void operationComplete(ChannelFuture channelFuture) throws Exception {
+
+//                    logStackInfo("在org.apache.zookeeper.ClientCnxnSocketNetty.connect函数中");
+
                     // this lock guarantees that channel won't be assigned after cleanup().
+                    // 此锁确保在cleanup()之后不会分配通道.
                     boolean connected = false;
+                    LOG.info("connectLock.lock");
                     connectLock.lock();
+                    LOG.info("connectLock into");
                     try {
                         if (!channelFuture.isSuccess()) {
-                            LOG.info("future isn't success, cause:", channelFuture.cause());
+                            LOG.info("cyzi----->future isn't success, cause:", channelFuture.cause());
                             return;
                         } else if (connectFuture == null) {
                             LOG.info("connect attempt cancelled");
@@ -202,7 +211,7 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
                         connectFuture = null;
                         connectLock.unlock();
                         if (connected) {
-                            LOG.info("channel is connected: {}", channelFuture.channel());
+                            LOG.info("cyzi----->channel is connected: {}", channelFuture.channel());
                         }
                         // need to wake on connect success or failure to avoid
                         // timing out ClientCnxn.SendThread which may be
@@ -295,6 +304,7 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
                      List<Packet> pendingQueue,
                      ClientCnxn cnxn)
             throws IOException, InterruptedException {
+        logStackInfo("调用doTransport函数");
         try {
             if (!firstConnect.await(waitTimeOut, TimeUnit.MILLISECONDS)) {
                 return;
@@ -352,6 +362,7 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
 
     /**
      * Sends a packet to the remote peer but does not flush() the channel.
+     * 发送包到服务端,但是不执行刷新缓冲区.
      * @param p packet to send.
      * @return a ChannelFuture that will complete when the write operation
      *         succeeds or fails.
@@ -363,6 +374,7 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
     // Use a single listener instance to reduce GC
     private final GenericFutureListener<Future<Void>> onSendPktDoneListener = f -> {
         if (f.isSuccess()) {
+            LOG.info("异步监听计数:{}",sentCount.get());
             sentCount.getAndIncrement();
         }
     };
@@ -425,6 +437,8 @@ public class ClientCnxnSocketNetty extends ClientCnxnSocket {
                 }
                 sendPktOnly(p);
                 anyPacketsSent = true;
+            }else{
+                logStackInfo("在doWrite函数中,p是心跳包");
             }
             if (outgoingQueue.isEmpty()) {
                 break;

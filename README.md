@@ -9,19 +9,42 @@ zk的持久化机制,还没有完全明白.客户端和服务端之间的心跳�
 持久化机制,还没有彻底整明白. 这个可以先放一放,还是先学习一下内部的通信机制吧.
 
 
-**2019年11月11日15:01:00**
+**2019-12-23 11:19:47**
 
-单机模式下的客户端和服务端通信机制,需要完成.
+**客户端启动过程**
+
+客户端的使用基于Netty(`org.apache.zookeeper.ClientCnxnSocketNetty`)的socket框架,不使用基于NIO的框架.
+
+
+`org.apache.zookeeper.ZooKeeper`
+
+在`org.apache.zookeeper.ZooKeeper.ZooKeeper(java.lang.String, int, org.apache.zookeeper.Watcher, boolean, org.apache.zookeeper.client.HostProvider, org.apache.zookeeper.client.ZKClientConfig)`
+这个函数中,初始化了客户端操作的上下文(`org.apache.zookeeper.ClientCnxn`)对象(以下简称上下文对象).
+这时,和服务端通信的socket对象已经通过反射创建了(`org.apache.zookeeper.ZooKeeper.getClientCnxnSocket()`).
+
+虽然已经创建,但是还没有启动.
+
+直到`ZooKeeper`的构造函数,调用了上下文对象的`start`方法.
+
+在上下文对象的`start()`函数中,启动了两个守护线程
+
+1. `sendThread`位于`org.apache.zookeeper.ClientCnxn.SendThread`,是一个内置类.
+
+看一下`sendThread`线程中的`run`方法(`org.apache.zookeeper.ClientCnxn.SendThread.run`).
 
 
 
-Spring Framework + Mybatis 
 
-zk+redis
+2. `eventThread`位于`org.apache.zookeeper.ClientCnxn.EventThread`,也是一个线程
 
-Netty
 
-Spring Cloud
+
+
+
+
+
+
+
 
 
 

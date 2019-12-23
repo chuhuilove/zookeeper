@@ -23,6 +23,17 @@ import org.slf4j.LoggerFactory;
 
 /***
  *  CreateMode value determines how the znode is created on ZooKeeper.
+ *  创建模式有6种
+ *  1. {@link #PERSISTENT} 持久性节点
+ *  2. {@link #PERSISTENT_SEQUENTIAL} 持久有序节点
+ *  3. {@link #EPHEMERAL} 临时节点
+ *  4. {@link #EPHEMERAL_SEQUENTIAL} 临时有序节点
+ *  5. {@link #CONTAINER} 没整明白
+ *  6. {@link #PERSISTENT_WITH_TTL} 没整明白
+ *  7. {@link #PERSISTENT_SEQUENTIAL_WITH_TTL} 没整明白
+ *
+ *
+ *
  */
 @InterfaceAudience.Public
 public enum CreateMode {
@@ -60,12 +71,16 @@ public enum CreateMode {
      */
     CONTAINER (4, false, false, true, false),
     /**
+     * 客户端断开连接后,znode不会自动删除.
+     * 但是,如果尚未在给定的TTL范围内修改znode,则它将在没有子节点时将其删除.
      * The znode will not be automatically deleted upon client's disconnect.
      * However if the znode has not been modified within the given TTL, it
      * will be deleted once it has no children.
      */
     PERSISTENT_WITH_TTL(5, false, false, false, true),
     /**
+     * 客户端断开连接后,znode不会自动删除,并且其名称将附加一个单调递增的数字.
+     * 但是,如果尚未在给定的TTL范围内修改znode,则它将在没有子节点时将其删除.
      * The znode will not be automatically deleted upon client's disconnect,
      * and its name will be appended with a monotonically increasing number.
      * However if the znode has not been modified within the given TTL, it
